@@ -1,0 +1,38 @@
+.profile-head {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-btn {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  line-height: normal;
+}
+.avatar-btn::after {
+  border: none;
+}
+
+.big-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+}
+.big-avatar-fallback {
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 28rpx;
+  text-align: center;
+  line-height: 120rpx;
+}
+
+.nickname-input {
+  font-size: 34rpx;
+  font-weight: 600;
+  padding: 6rpx 0;
+}
+
+.title-md {
+  font-size: 30rpx;
+  font-weight: 600;
+}

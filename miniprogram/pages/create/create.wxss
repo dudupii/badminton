@@ -1,0 +1,7 @@
+.picker {
+  flex: 1;
+  margin-right: 16rpx;
+}
+.picker:last-child {
+  margin-right: 0;
+}

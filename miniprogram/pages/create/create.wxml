@@ -1,0 +1,78 @@
+<view class="container">
+  <view class="card">
+    <view class="field">
+      <view class="field-label">活动标题 *</view>
+      <input
+        class="input"
+        placeholder="如：周三晚奥体打球"
+        maxlength="40"
+        value="{{title}}"
+        data-field="title"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="field">
+      <view class="field-label">地点</view>
+      <input
+        class="input"
+        placeholder="如：奥体中心 5 号场地"
+        maxlength="60"
+        value="{{location}}"
+        data-field="location"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="field">
+      <view class="field-label">开始时间 *</view>
+      <view class="row">
+        <picker mode="date" value="{{startDate}}" data-field="startDate" bindchange="onPick" class="picker">
+          <view class="input">{{startDate || '选择日期'}}</view>
+        </picker>
+        <picker mode="time" value="{{startTime}}" data-field="startTime" bindchange="onPick" class="picker">
+          <view class="input">{{startTime}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="field">
+      <view class="field-label">结束时间（可选）</view>
+      <view class="row">
+        <picker mode="date" value="{{endDate}}" data-field="endDate" bindchange="onPick" class="picker">
+          <view class="input">{{endDate || '选择日期'}}</view>
+        </picker>
+        <picker mode="time" value="{{endTime}}" data-field="endTime" bindchange="onPick" class="picker">
+          <view class="input">{{endTime}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="field">
+      <view class="field-label">名额 *</view>
+      <input
+        class="input"
+        type="number"
+        placeholder="如 8"
+        value="{{capacity}}"
+        bindinput="onCapacity"
+      />
+      <view class="muted" style="margin-top:10rpx;">超过名额的报名将自动进入候补</view>
+    </view>
+
+    <view class="field">
+      <view class="field-label">备注（可选）</view>
+      <textarea
+        class="input"
+        style="height:120rpx;"
+        placeholder="费用分摊、水平要求等"
+        maxlength="200"
+        value="{{description}}"
+        data-field="description"
+        bindinput="onInput"
+      />
+    </view>
+  </view>
+
+  <button class="btn btn-primary" bindtap="submit" disabled="{{submitting}}">发起活动</button>
+</view>

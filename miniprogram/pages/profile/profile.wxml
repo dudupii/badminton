@@ -1,0 +1,42 @@
+<view class="container">
+  <!-- profile header -->
+  <view class="card profile-head">
+    <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      <image wx:if="{{user.avatarUrl}}" class="big-avatar" src="{{user.avatarUrl}}" />
+      <view wx:else class="big-avatar big-avatar-fallback">头像</view>
+    </button>
+    <view style="flex:1;margin-left:24rpx;">
+      <input
+        type="nickname"
+        class="nickname-input"
+        placeholder="点击设置昵称"
+        value="{{user.nickname}}"
+        bindinput="onNicknameInput"
+        bindblur="onNicknameBlur"
+      />
+      <view class="muted" style="margin-top:8rpx;">用微信身份报名活动</view>
+    </view>
+  </view>
+
+  <!-- my registrations -->
+  <view class="section-title" style="margin:8rpx 8rpx 16rpx;">我的报名</view>
+
+  <block wx:if="{{regs.length}}">
+    <view
+      class="card"
+      wx:for="{{regs}}"
+      wx:key="activity.id"
+      data-id="{{item.activity.id}}"
+      bindtap="goDetail"
+    >
+      <view class="row between">
+        <text class="title-md">{{item.activity.title}}</text>
+        <text class="tag tag-open" wx:if="{{item.status === 'confirmed'}}">正式</text>
+        <text class="tag tag-wait" wx:else>候补</text>
+      </view>
+      <view class="muted" style="margin-top:10rpx;">⏰ {{item.timeText}}</view>
+    </view>
+  </block>
+
+  <view wx:elif="{{!loading}}" class="empty">还没有报名任何活动</view>
+</view>

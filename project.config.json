@@ -1,0 +1,18 @@
+{
+  "description": "羽毛球活动报名小程序",
+  "miniprogramRoot": "miniprogram/",
+  "projectname": "badminton-signup",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": false,
+    "newFeature": true,
+    "bigPackageSizeSupport": true
+  },
+  "appid": "touristappid",
+  "compileType": "miniprogram",
+  "libVersion": "3.3.4",
+  "condition": {}
+}

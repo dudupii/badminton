@@ -1,0 +1,62 @@
+.info-line {
+  margin-top: 12rpx;
+  color: #4b5563;
+  font-size: 27rpx;
+}
+
+.roster-item {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 0;
+  border-bottom: 2rpx solid #f3f4f6;
+}
+.roster-item:last-child {
+  border-bottom: none;
+}
+.roster-no {
+  width: 48rpx;
+  text-align: center;
+  font-weight: 600;
+  color: #16a34a;
+}
+.roster-name {
+  flex: 1;
+  margin-left: 18rpx;
+}
+.avatar {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  margin-left: 8rpx;
+}
+.avatar-fallback {
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 26rpx;
+  font-weight: 600;
+  text-align: center;
+  line-height: 56rpx;
+}
+
+.action-bar {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(15, 23, 42, 0.04);
+}
+
+.my-status {
+  text-align: center;
+  font-size: 28rpx;
+  margin-bottom: 20rpx;
+  padding: 16rpx;
+  border-radius: 12rpx;
+}
+.my-status.confirmed {
+  background: #dcfce7;
+  color: #15803d;
+}
+.my-status.waitlist {
+  background: #fef3c7;
+  color: #b45309;
+}

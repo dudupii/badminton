@@ -1,0 +1,13 @@
+# dependencies
+server/node_modules/
+
+# runtime data (the JSON database)
+server/data/
+server/.env
+
+# WeChat DevTools private config (machine-local)
+miniprogram/project.private.config.json
+
+# logs / os junk
+*.log
+.DS_Store
