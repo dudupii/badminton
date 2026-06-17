@@ -46,6 +46,24 @@
     </view>
   </view>
 
+  <!-- invite QR -->
+  <view class="card qr-card">
+    <view class="section-title">邀请报名</view>
+    <view class="qr-wrap">
+      <image
+        class="qr-img"
+        src="{{qrcodeUrl}}"
+        mode="aspectFit"
+        show-menu-by-longpress="{{true}}"
+      />
+    </view>
+    <view class="muted qr-tip">扫一扫二维码，或转发给微信好友，对方即可报名</view>
+    <view class="row qr-actions">
+      <button class="btn btn-ghost qr-btn" bindtap="saveQrToAlbum">保存二维码</button>
+      <button class="btn btn-primary qr-btn" open-type="share">转发给好友</button>
+    </view>
+  </view>
+
   <!-- my status + actions -->
   <view class="action-bar">
     <block wx:if="{{detail.myStatus === 'confirmed'}}">

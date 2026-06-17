@@ -22,10 +22,12 @@ Page({
   },
 
   onLoad() {
-    const today = new Date();
+    // Default to tomorrow so the activity is always future-dated and
+    // registerable, even late at night.
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
     this.setData({
-      startDate: dateStr(today),
-      endDate: dateStr(today),
+      startDate: dateStr(tomorrow),
+      endDate: dateStr(tomorrow),
     });
   },
 
@@ -53,6 +55,9 @@ Page({
 
     const start = new Date(d.startDate + 'T' + d.startTime + ':00');
     if (isNaN(start.getTime())) return wx.showToast({ title: '开始时间无效', icon: 'none' });
+    if (start.getTime() < Date.now()) {
+      return wx.showToast({ title: '开始时间已过，请选择未来时间', icon: 'none' });
+    }
 
     let endTime = null;
     if (d.endDate && d.endTime) {
@@ -63,7 +68,7 @@ Page({
     this.setData({ submitting: true });
     wx.showLoading({ title: '创建中' });
     try {
-      await request('POST', '/api/activities', {
+      const created = await request('POST', '/api/activities', {
         title: d.title.trim(),
         location: d.location.trim(),
         description: d.description.trim(),
@@ -73,7 +78,10 @@ Page({
       });
       wx.hideLoading();
       wx.showToast({ title: '创建成功', icon: 'success' });
-      setTimeout(() => wx.navigateBack(), 700);
+      // Jump to the detail page so the organizer can grab / share the QR.
+      setTimeout(() => {
+        wx.redirectTo({ url: '/pages/detail/detail?id=' + created.id });
+      }, 800);
     } catch (e) {
       wx.hideLoading();
       this.setData({ submitting: false });

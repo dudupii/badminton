@@ -4,7 +4,23 @@
 // store, so capacity / waitlist / promote mutations are serialized & atomic.
 // `now` params default to Date.now() but can be injected by tests.
 
+const crypto = require('crypto');
 const { newId } = require('./store');
+
+// Readable alphabet (no 0/O/1/I/L) for activity invite codes — these become
+// the `scene` value embedded in the mini-program QR code (max 32 chars).
+const CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+function genCode(state, len = 6) {
+  const existing = new Set(Object.values(state.activities).map((a) => a.code));
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const bytes = crypto.randomBytes(len);
+    let s = '';
+    for (let i = 0; i < len; i++) s += CODE_CHARS[bytes[i] % CODE_CHARS.length];
+    if (!existing.has(s)) return s;
+  }
+  return CODE_CHARS.replace(/[^A-Z0-9]/g, '').slice(0, len); // astronomically unlikely fallback
+}
 
 function httpError(statusCode, message) {
   const err = new Error(message);
@@ -22,6 +38,7 @@ function toMs(value) {
 function publicActivity(a) {
   return {
     id: a.id,
+    code: a.code,
     title: a.title,
     description: a.description,
     location: a.location,
@@ -71,6 +88,7 @@ async function createActivity(store, input, creatorOpenid) {
   return store.txn((state) => {
     const activity = {
       id: newId('act_'),
+      code: genCode(state),
       title,
       description: (input.description || '').trim(),
       location: (input.location || '').trim(),
@@ -96,6 +114,15 @@ async function listActivities(store) {
 async function getActivity(store, id, viewerOpenid) {
   const state = store.snapshot();
   const a = state.activities[id];
+  if (!a) throw httpError(404, '活动不存在');
+  return enrichActivity(state, a, viewerOpenid);
+}
+
+// Look up by invite code — used when the mini-program is opened by scanning
+// the activity QR code (options.scene == code).
+async function getActivityByCode(store, code, viewerOpenid) {
+  const state = store.snapshot();
+  const a = Object.values(state.activities).find((x) => x.code === code);
   if (!a) throw httpError(404, '活动不存在');
   return enrichActivity(state, a, viewerOpenid);
 }
@@ -223,6 +250,7 @@ module.exports = {
   createActivity,
   listActivities,
   getActivity,
+  getActivityByCode,
   setActivityStatus,
   register,
   cancel,

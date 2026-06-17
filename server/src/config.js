@@ -37,6 +37,9 @@ const config = {
   wx: {
     appid: process.env.WX_APPID || '',
     secret: process.env.WX_SECRET || '',
+    // Mini-program QR codes target which version: 'release' | 'trial' | 'develop'.
+    // Use 'develop'/'trial' while testing before publishing.
+    envVersion: process.env.WX_ENV_VERSION || 'release',
     // Dev mode = no real WeChat credentials. Login then accepts a stable
     // devUserId from the client to give a persistent identity offline.
     devMode: !(process.env.WX_APPID && process.env.WX_SECRET),

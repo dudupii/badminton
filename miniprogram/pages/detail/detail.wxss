@@ -60,3 +60,28 @@
   background: #fef3c7;
   color: #b45309;
 }
+
+.qr-card {
+  text-align: center;
+}
+.qr-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 12rpx 0 8rpx;
+}
+.qr-img {
+  width: 360rpx;
+  height: 360rpx;
+  background: #fff;
+}
+.qr-tip {
+  margin-top: 8rpx;
+}
+.qr-actions {
+  margin-top: 22rpx;
+}
+.qr-btn {
+  flex: 1;
+  width: auto;
+  margin: 0 8rpx;
+}

@@ -1,11 +1,14 @@
 const { request } = require('../../utils/request');
 const { ensureLogin } = require('../../utils/auth');
+const { BASE_URL } = require('../../utils/config');
 const fmt = require('../../utils/format');
 
 Page({
   data: {
     id: '',
+    scene: '', // invite code, present when opened by scanning the activity QR
     detail: null,
+    qrcodeUrl: '',
     loading: true,
     isCreator: false,
     canRegister: false,
@@ -15,7 +18,9 @@ Page({
   },
 
   onLoad(q) {
-    this.setData({ id: q.id });
+    // q.id: normal in-app navigation; q.scene: arrived via scanned mini-program code.
+    const scene = q.scene ? decodeURIComponent(q.scene) : '';
+    this.setData({ id: q.id || '', scene });
   },
 
   async onShow() {
@@ -30,7 +35,12 @@ Page({
   async load() {
     try {
       this.setData({ loading: true });
-      const d = await request('GET', '/api/activities/' + this.data.id);
+      const d = await request(
+        'GET',
+        this.data.scene
+          ? '/api/activities/by-code/' + encodeURIComponent(this.data.scene)
+          : '/api/activities/' + this.data.id
+      );
       const app = getApp();
       const me = app.globalData.openid;
 
@@ -46,7 +56,9 @@ Page({
           : 0;
 
       this.setData({
+        id: d.id,
         detail: d,
+        qrcodeUrl: BASE_URL + '/api/activities/' + d.id + '/qrcode',
         loading: false,
         isCreator: me === d.createdBy,
         isPast,
@@ -108,6 +120,47 @@ Page({
   copyLocation() {
     if (this.data.detail && this.data.detail.location) {
       wx.setClipboardData({ data: this.data.detail.location });
+    }
+  },
+
+  // Forward the activity to a WeChat chat — recipient taps the card to open
+  // this page and sign up. Works in dev/trial (testers) without a QR.
+  onShareAppMessage() {
+    const d = this.data.detail;
+    return {
+      title: d ? `邀请你参加：${d.title}` : '羽毛球活动报名',
+      path: 'pages/detail/detail?id=' + this.data.id,
+    };
+  },
+
+  async saveQrToAlbum() {
+    if (!this.data.qrcodeUrl) return;
+    try {
+      const dl = await new Promise((res, rej) =>
+        wx.downloadFile({ url: this.data.qrcodeUrl, success: res, fail: rej })
+      );
+      await new Promise((res, rej) => {
+        wx.saveImageToPhotosAlbum({
+          filePath: dl.tempFilePath,
+          success: res,
+          fail: (err) => {
+            if (err.errMsg && err.errMsg.indexOf('auth deny') !== -1) {
+              wx.showModal({
+                title: '需要相册权限',
+                content: '请在设置中开启"保存到相册"权限',
+                confirmText: '去设置',
+                success: (m) => {
+                  if (m.confirm) wx.openSetting();
+                },
+              });
+            }
+            rej(err);
+          },
+        });
+      });
+      wx.showToast({ title: '已保存到相册', icon: 'success' });
+    } catch (e) {
+      wx.showToast({ title: '保存失败', icon: 'none' });
     }
   },
 });

@@ -129,6 +129,33 @@ test('createActivity validates inputs', async () => {
   await withError(400, logic.createActivity(store, { title: 'x', capacity: 1 }, 'o'));
 });
 
+test('each activity gets a short invite code; by-code lookup resolves it', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(
+    store,
+    { title: '二维码测试', startTime: '2099-01-01T10:00:00', capacity: 4 },
+    'org'
+  );
+  assert.ok(act.code, 'code present');
+  assert.match(act.code, /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$/, '6 readable chars');
+
+  const byCode = await logic.getActivityByCode(store, act.code);
+  assert.equal(byCode.id, act.id);
+
+  // a second activity gets a distinct code
+  const act2 = await logic.createActivity(
+    store,
+    { title: '另一场', startTime: '2099-02-01T10:00:00', capacity: 4 },
+    'org'
+  );
+  assert.notEqual(act.code, act2.code);
+});
+
+test('getActivityByCode rejects unknown codes', async () => {
+  const store = tmpStore();
+  await withError(404, logic.getActivityByCode(store, 'NOPE01'));
+});
+
 test('only the creator can close an activity', async () => {
   const store = tmpStore();
   const act = await logic.createActivity(store, {

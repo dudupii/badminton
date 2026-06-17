@@ -1,9 +1,11 @@
 'use strict';
 
 const express = require('express');
+const QRCode = require('qrcode');
 const config = require('./config');
 const { Store } = require('./store');
 const { sign, verify, codeToOpenid, requireAuth, optionalAuth } = require('./auth');
+const wxapi = require('./wxapi');
 const logic = require('./logic');
 
 const store = new Store(config.dataFile);
@@ -19,6 +21,19 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+// --- request logging (skip CORS preflight & health pings) ---
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS' || req.path === '/api/health') return next();
+  const start = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    console.log(
+      `${new Date().toISOString()}  ${req.method} ${req.originalUrl} -> ${res.statusCode} (${ms}ms)`
+    );
+  });
   next();
 });
 
@@ -89,6 +104,49 @@ app.get(
   '/api/activities/:id',
   optionalAuth,
   wrap(async (req) => logic.getActivity(store, req.params.id, req.user && req.user.openid))
+);
+
+// Open the activity by invite code — used when the mini-program is launched by
+// scanning the activity QR code (options.scene == code).
+app.get(
+  '/api/activities/by-code/:code',
+  optionalAuth,
+  wrap(async (req) => logic.getActivityByCode(store, req.params.code, req.user && req.user.openid))
+);
+
+// QR code image for an activity. Public (the <image> tag can't send auth
+// headers). Production -> official 小程序码 (scannable into the mini-program);
+// dev -> a plain QR placeholder so the UI works without credentials.
+app.get(
+  '/api/activities/:id/qrcode',
+  wrap(async (req, res) => {
+    const state = store.snapshot();
+    const a = state.activities[req.params.id];
+    if (!a) throw logic.httpError(404, '活动不存在');
+
+    let buffer;
+    let contentType;
+    if (config.wx.devMode) {
+      const text =
+        `羽毛球报名｜${a.title}｜口令 ${a.code}\n` +
+        `（开发模式占位码；生产环境将生成可直接扫码进入小程序的小程序码）`;
+      buffer = await QRCode.toBuffer(text, {
+        type: 'png',
+        width: 430,
+        margin: 2,
+        color: { dark: '#16a34a', light: '#ffffff' },
+      });
+      contentType = 'image/png';
+    } else {
+      ({ buffer, contentType } = await wxapi.getMiniProgramCode({
+        scene: a.code,
+        page: 'pages/detail/detail',
+      }));
+    }
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(buffer);
+  })
 );
 
 app.patch(

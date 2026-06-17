@@ -7,6 +7,7 @@
 - 🔢 名额满后自动转为**候补**，按报名先后排序
 - 🔁 有人**取消**时，候补第一名**自动上位**
 - 👥 实时查看正式名单 / 候补名单 / 自己的状态
+- 🔗 每个活动自动生成**二维码 / 小程序码**，可转发或扫码报名
 
 ```
 badminton/
@@ -16,6 +17,7 @@ badminton/
 │   │   ├── logic.js     # 领域逻辑（可测试，纯事务）
 │   │   ├── store.js     # JSON 文件持久化 + 写锁（保证原子性）
 │   │   ├── auth.js      # 微信 code2session + HMAC token
+│   │   ├── wxapi.js     # access_token + 小程序码 (wxacode.getUnlimited)
 │   │   └── config.js
 │   └── tests/           # node:test 单元/逻辑测试
 ├── miniprogram/         # 微信小程序前端
@@ -54,6 +56,7 @@ cp .env.example .env
 # 正式部署时填写：
 #   WX_APPID=你的小程序AppID
 #   WX_SECRET=你的小程序Secret
+#   WX_ENV_VERSION=release   # develop | trial | release（二维码进入的版本）
 #   TOKEN_SECRET=换成一长串随机字符串
 ```
 
@@ -64,7 +67,7 @@ cd server
 npm test
 ```
 
-覆盖：名额截断、候补排序、取消后自动上位（FIFO）、重复报名拦截、取消后再报名、过期活动拦截、输入校验、仅发起人可关闭、token 签名校验。
+覆盖：名额截断、候补排序、取消后自动上位（FIFO）、重复报名拦截、取消后再报名、过期活动拦截、输入校验、仅发起人可关闭、**邀请码生成与按码查询**、token 签名校验。
 
 ---
 
@@ -90,6 +93,8 @@ npm test
 | GET  | `/api/activities` | 活动列表 | 公开 |
 | POST | `/api/activities` | 发起活动 | 必须 |
 | GET  | `/api/activities/:id` | 活动详情 + 名单 + 我的状态 | 可选 |
+| GET  | `/api/activities/by-code/:code` | 按**邀请码**查活动（扫码进入时用） | 可选 |
+| GET  | `/api/activities/:id/qrcode` | 活动二维码图片（`image/png`） | 公开 |
 | PATCH| `/api/activities/:id` | 发起人关闭/重开报名 | 必须(发起人) |
 | POST | `/api/activities/:id/register` | 报名（满则候补） | 必须 |
 | POST | `/api/activities/:id/cancel` | 取消报名（触发候补上位） | 必须 |
@@ -102,13 +107,24 @@ npm test
 - 同一活动不可重复报名；取消后可再次报名。
 - 活动开始后或被发起人关闭后，无法报名。
 
+### 二维码 / 邀请报名
+
+每个活动创建时会生成一个 6 位**邀请码**（如 `PHH5MU`），并据此生成二维码：
+
+- **生产模式**（配置了 `WX_APPID`/`WX_SECRET`）：调用官方 `wxacode.getUnlimited` 生成真正的**小程序码**。别的微信用户用「扫一扫」即可**直接进入活动详情页**报名——`scene` 即邀请码，详情页 `onLoad` 通过 `options.scene` 读取并按码加载活动。
+- **开发模式**：生成一张占位二维码（品牌绿码），先跑通 UI；填上凭证后自动切换为真实小程序码。
+- 详情页可**保存二维码到相册**，或点「转发给好友」把活动卡片发到微信群——对方点击同样进入详情页报名。
+- `WX_ENV_VERSION`（`develop`/`trial`/`release`）决定扫码进入开发版/体验版/正式版；发布前用 `trial` 测试。
+
+> 生产环境还需在小程序管理后台「开发设置 → 服务器域名」配置 **downloadFile 合法域名**（保存二维码时用 `wx.downloadFile`）。
+
 ---
 
 ## 设计说明
 
 - **原子性**：后端单进程，所有写操作经过串行写锁（`store.txn`），因此名额计数与「取消→上位」不会出现竞态。
 - **零外部数据库**：默认用 JSON 文件存储（`server/data/db.json`）。如需替换为 MySQL/MongoDB，只需改写 `store.js`。
-- **无密码**：身份完全基于微信 openid；token 使用 HMAC-SHA256 自签，无额外依赖（唯一运行时依赖是 `express`）。
+- **无密码**：身份完全基于微信 openid；token 使用 HMAC-SHA256 自签。运行时依赖仅 `express` + `qrcode`（开发模式占位码用）。
 
 ## 后续可扩展
 
