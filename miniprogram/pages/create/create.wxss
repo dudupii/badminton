@@ -1,7 +1,8 @@
-.picker {
-  flex: 1;
-  margin-right: 16rpx;
+/* Date/time pickers stacked vertically, full width — reliable tap target. */
+.dt-picker {
+  display: block;
+  width: 100%;
 }
-.picker:last-child {
-  margin-right: 0;
+.dt-picker-gap {
+  margin-top: 16rpx;
 }

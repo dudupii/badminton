@@ -27,13 +27,19 @@ Page({
       this.setData({ loading: true });
       const list = await request('GET', '/api/activities');
       const now = Date.now();
-      const activities = list.map((a) => ({
-        ...a,
-        timeText: fmt.dateTime(a.startTime),
-        fillText: a.confirmedCount + '/' + a.capacity,
-        isFull: a.confirmedCount >= a.capacity,
-        isPast: a.startTime && a.startTime < now,
-      }));
+      const activities = list
+        .map((a) => ({
+          ...a,
+          timeText: fmt.dateTime(a.startTime),
+          fillText: a.confirmedCount + '/' + a.capacity,
+          isFull: a.confirmedCount >= a.capacity,
+          isPast: a.startTime && a.startTime < now,
+        }))
+        .sort((x, y) => {
+          // Upcoming activities first (earliest soonest), expired ones last.
+          if (x.isPast !== y.isPast) return x.isPast ? 1 : -1;
+          return x.isPast ? y.startTime - x.startTime : x.startTime - y.startTime;
+        });
       this.setData({ activities, loading: false });
     } catch (e) {
       this.setData({ loading: false });

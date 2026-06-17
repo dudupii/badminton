@@ -117,6 +117,26 @@ Page({
     }
   },
 
+  async deleteActivity() {
+    const confirm = await new Promise((resolve) => {
+      wx.showModal({
+        title: '删除活动',
+        content: '将删除该活动及其所有报名记录，且不可撤销。确定？',
+        confirmText: '删除',
+        confirmColor: '#dc2626',
+        success: (m) => resolve(m.confirm),
+      });
+    });
+    if (!confirm) return;
+    try {
+      await request('DELETE', '/api/activities/' + this.data.id);
+      wx.showToast({ title: '已删除', icon: 'success' });
+      setTimeout(() => wx.switchTab({ url: '/pages/index/index' }), 600);
+    } catch (e) {
+      wx.showToast({ title: e.message, icon: 'none' });
+    }
+  },
+
   copyLocation() {
     if (this.data.detail && this.data.detail.location) {
       wx.setClipboardData({ data: this.data.detail.location });

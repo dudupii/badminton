@@ -3,6 +3,18 @@
   color: #4b5563;
   font-size: 27rpx;
 }
+.desc-line {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 2rpx solid #f3f4f6;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.desc-label {
+  color: #6b7280;
+  font-weight: 600;
+}
 
 .roster-item {
   display: flex;

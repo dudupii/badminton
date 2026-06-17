@@ -170,6 +170,20 @@ test('only the creator can close an activity', async () => {
   await withError(400, logic.register(store, act.id, 'u1'));
 });
 
+test('creator can delete their activity and its registrations; others cannot', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, {
+    title: '删除',
+    startTime: '2099-01-01T10:00:00',
+    capacity: 2,
+  }, 'org');
+  await logic.register(store, act.id, 'u1', 1000);
+  await withError(403, logic.deleteActivity(store, act.id, 'stranger'));
+  await logic.deleteActivity(store, act.id, 'org');
+  await withError(404, logic.getActivity(store, act.id));
+  assert.equal(store.snapshot().registrations.filter((r) => r.activityId === act.id).length, 0);
+});
+
 test('myRegistrations returns only active signups', async () => {
   const store = tmpStore();
   const a = await logic.createActivity(store, { title: 'A', startTime: '2099-01-01T10:00:00', capacity: 5 }, 'org');

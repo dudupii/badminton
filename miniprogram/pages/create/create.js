@@ -18,6 +18,7 @@ Page({
     startTime: '19:00',
     endDate: '',
     endTime: '21:00',
+    todayDate: '',
     submitting: false,
   },
 
@@ -26,6 +27,7 @@ Page({
     // registerable, even late at night.
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
     this.setData({
+      todayDate: dateStr(new Date()),
       startDate: dateStr(tomorrow),
       endDate: dateStr(tomorrow),
     });
@@ -42,9 +44,19 @@ Page({
     this.setData({ capacity: v });
   },
 
-  onPick(e) {
-    const { field } = e.currentTarget.dataset;
-    this.setData({ [field]: e.detail.value });
+  // Explicit per-field change handlers for the date/time pickers — avoids any
+  // ambiguity from computed-key setData and keeps the tap target reliable.
+  onStartDateChange(e) {
+    this.setData({ startDate: e.detail.value });
+  },
+  onStartTimeChange(e) {
+    this.setData({ startTime: e.detail.value });
+  },
+  onEndDateChange(e) {
+    this.setData({ endDate: e.detail.value });
+  },
+  onEndTimeChange(e) {
+    this.setData({ endTime: e.detail.value });
   },
 
   async submit() {

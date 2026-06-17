@@ -1,7 +1,7 @@
 <view class="container">
   <block wx:if="{{activities.length}}">
     <view
-      class="card"
+      class="card {{item.isPast ? 'dim' : ''}}"
       wx:for="{{activities}}"
       wx:key="id"
       data-id="{{item.id}}"
@@ -9,7 +9,8 @@
     >
       <view class="row between">
         <text class="title-lg">{{item.title}}</text>
-        <text class="tag tag-closed" wx:if="{{item.status === 'closed'}}">已关闭</text>
+        <text class="tag tag-closed" wx:if="{{item.isPast}}">已结束</text>
+        <text class="tag tag-closed" wx:elif="{{item.status === 'closed'}}">已关闭</text>
         <text class="tag tag-wait" wx:elif="{{item.isFull}}">候补中</text>
         <text class="tag tag-open" wx:else>报名中</text>
       </view>

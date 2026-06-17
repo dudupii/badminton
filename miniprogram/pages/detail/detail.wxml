@@ -9,13 +9,15 @@
     </view>
     <view class="info-line">⏰ {{detail.timeText}}<text wx:if="{{detail.endText}}"> ～ {{detail.endText}}</text></view>
     <view class="info-line" wx:if="{{detail.location}}" bindtap="copyLocation">📍 {{detail.location}} <text class="muted">（点击复制）</text></view>
-    <view class="info-line" wx:if="{{detail.description}}">{{detail.description}}</view>
     <view class="row between" style="margin-top:16rpx;">
       <view>
         <text style="color:#16a34a;font-weight:600;font-size:30rpx;">{{detail.confirmedCount}}/{{detail.capacity}}</text>
         <text class="muted"> 已报名</text>
         <text wx:if="{{detail.waitlistCount}}" class="muted"> · 候补 {{detail.waitlistCount}}</text>
       </view>
+    </view>
+    <view class="info-line desc-line" wx:if="{{detail.description}}">
+      <text class="desc-label">活动说明：</text>{{detail.description}}
     </view>
   </view>
 
@@ -88,6 +90,9 @@
 
     <button wx:if="{{isCreator}}" class="btn btn-ghost" style="margin-top:18rpx;" bindtap="toggleStatus">
       {{detail.status === 'open' ? '关闭报名' : '重新开放报名'}}
+    </button>
+    <button wx:if="{{isCreator}}" class="btn btn-danger" style="margin-top:18rpx;" bindtap="deleteActivity">
+      删除活动
     </button>
   </view>
 </view>

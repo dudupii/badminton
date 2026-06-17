@@ -167,6 +167,17 @@ async function setActivityStatus(store, id, status, actorOpenid) {
   });
 }
 
+async function deleteActivity(store, id, actorOpenid) {
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以删除');
+    delete state.activities[id];
+    state.registrations = state.registrations.filter((r) => r.activityId !== id);
+    return { deleted: true };
+  });
+}
+
 // ---- registrations ---------------------------------------------------------
 
 async function register(store, activityId, openid, now = Date.now()) {
@@ -252,6 +263,7 @@ module.exports = {
   getActivity,
   getActivityByCode,
   setActivityStatus,
+  deleteActivity,
   register,
   cancel,
   myRegistrations,

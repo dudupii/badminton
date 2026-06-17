@@ -1,3 +1,6 @@
 .quota {
   font-size: 26rpx;
 }
+.dim {
+  opacity: 0.5;
+}

@@ -26,26 +26,22 @@
 
     <view class="field">
       <view class="field-label">开始时间 *</view>
-      <view class="row">
-        <picker mode="date" value="{{startDate}}" data-field="startDate" bindchange="onPick" class="picker">
-          <view class="input">{{startDate || '选择日期'}}</view>
-        </picker>
-        <picker mode="time" value="{{startTime}}" data-field="startTime" bindchange="onPick" class="picker">
-          <view class="input">{{startTime}}</view>
-        </picker>
-      </view>
+      <picker mode="date" value="{{startDate}}" start="{{todayDate}}" bindchange="onStartDateChange" class="dt-picker">
+        <view class="input">{{startDate || '选择日期'}}</view>
+      </picker>
+      <picker mode="time" value="{{startTime}}" bindchange="onStartTimeChange" class="dt-picker dt-picker-gap">
+        <view class="input">{{startTime}}</view>
+      </picker>
     </view>
 
     <view class="field">
       <view class="field-label">结束时间（可选）</view>
-      <view class="row">
-        <picker mode="date" value="{{endDate}}" data-field="endDate" bindchange="onPick" class="picker">
-          <view class="input">{{endDate || '选择日期'}}</view>
-        </picker>
-        <picker mode="time" value="{{endTime}}" data-field="endTime" bindchange="onPick" class="picker">
-          <view class="input">{{endTime}}</view>
-        </picker>
-      </view>
+      <picker mode="date" value="{{endDate}}" start="{{todayDate}}" bindchange="onEndDateChange" class="dt-picker">
+        <view class="input">{{endDate || '选择日期'}}</view>
+      </picker>
+      <picker mode="time" value="{{endTime}}" bindchange="onEndTimeChange" class="dt-picker dt-picker-gap">
+        <view class="input">{{endTime}}</view>
+      </picker>
     </view>
 
     <view class="field">
@@ -61,16 +57,17 @@
     </view>
 
     <view class="field">
-      <view class="field-label">备注（可选）</view>
+      <view class="field-label">活动说明（可选）</view>
       <textarea
         class="input"
-        style="height:120rpx;"
-        placeholder="费用分摊、水平要求等"
+        style="height:140rpx;"
+        placeholder="费用分摊、水平要求、注意事项等"
         maxlength="200"
         value="{{description}}"
         data-field="description"
         bindinput="onInput"
       />
+      <view class="muted" style="margin-top:10rpx;">填写后将在活动详情的日期与报名状态之后展示</view>
     </view>
   </view>
 

@@ -159,6 +159,12 @@ app.patch(
   })
 );
 
+app.delete(
+  '/api/activities/:id',
+  requireAuth,
+  wrap(async (req) => logic.deleteActivity(store, req.params.id, req.user.openid))
+);
+
 // --- registrations ----------------------------------------------------------
 app.post(
   '/api/activities/:id/register',
