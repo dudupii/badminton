@@ -1,0 +1,32 @@
+# systemd unit — keep the backend running and restart on failure.
+#
+# Install:
+#   sudo cp badminton-server.service /etc/systemd/system/badminton-server.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now badminton-server
+# Check:
+#   sudo systemctl status badminton-server
+#   sudo journalctl -u badminton-server -f
+#
+# Adjust User/WorkingDirectory to match your deployment.
+
+[Unit]
+Description=Badminton signup backend (Node + Express)
+After=network.target
+
+[Service]
+Type=simple
+User=badminton
+Group=badminton
+WorkingDirectory=/opt/badminton/server
+EnvironmentFile=/opt/badminton/server/.env
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=5
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

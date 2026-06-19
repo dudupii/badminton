@@ -1,0 +1,8 @@
+/* Date/time pickers stacked vertically, full width — reliable tap target. */
+.dt-picker {
+  display: block;
+  width: 100%;
+}
+.dt-picker-gap {
+  margin-top: 16rpx;
+}

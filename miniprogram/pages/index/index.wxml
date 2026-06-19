@@ -1,0 +1,41 @@
+<view class="container">
+  <block wx:if="{{activities.length}}">
+    <view
+      class="card {{item.isPast ? 'dim' : ''}}"
+      wx:for="{{activities}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="row between">
+        <text class="title-lg">{{item.title}}</text>
+        <text class="tag tag-closed" wx:if="{{item.isPast}}">已结束</text>
+        <text class="tag tag-closed" wx:elif="{{item.status === 'closed'}}">已关闭</text>
+        <text class="tag tag-wait" wx:elif="{{item.isFull}}">候补中</text>
+        <text class="tag tag-open" wx:else>报名中</text>
+      </view>
+
+      <view style="margin-top:14rpx;">
+        <text class="muted">⏰ {{item.timeText}}</text>
+      </view>
+      <view wx:if="{{item.location}}" style="margin-top:8rpx;">
+        <text class="muted">📍 {{item.location}}</text>
+      </view>
+
+      <view class="row between" style="margin-top:18rpx;">
+        <text class="quota">
+          <text style="color:#16a34a;font-weight:600;">{{item.fillText}}</text>
+          <text class="muted"> 个名额</text>
+          <text wx:if="{{item.waitlistCount}}" class="muted"> · 候补 {{item.waitlistCount}}</text>
+        </text>
+        <text class="muted">查看 ›</text>
+      </view>
+    </view>
+  </block>
+
+  <view wx:elif="{{!loading}}" class="empty">
+    还没有活动，点右下角 + 发起一场吧
+  </view>
+</view>
+
+<view class="fab" bindtap="goCreate">+</view>

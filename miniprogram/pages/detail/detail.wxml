@@ -1,0 +1,100 @@
+<view class="container" wx:if="{{detail}}">
+  <!-- header -->
+  <view class="card">
+    <view class="row between">
+      <text class="title-lg">{{detail.title}}</text>
+      <text class="tag tag-closed" wx:if="{{detail.status === 'closed'}}">已关闭</text>
+      <text class="tag tag-open" wx:elif="{{!isPast}}">报名中</text>
+      <text class="tag tag-closed" wx:else>已结束</text>
+    </view>
+    <view class="info-line">⏰ {{detail.timeText}}<text wx:if="{{detail.endText}}"> ～ {{detail.endText}}</text></view>
+    <view class="info-line" wx:if="{{detail.location}}" bindtap="copyLocation">📍 {{detail.location}} <text class="muted">（点击复制）</text></view>
+    <view class="row between" style="margin-top:16rpx;">
+      <view>
+        <text style="color:#16a34a;font-weight:600;font-size:30rpx;">{{detail.confirmedCount}}/{{detail.capacity}}</text>
+        <text class="muted"> 已报名</text>
+        <text wx:if="{{detail.waitlistCount}}" class="muted"> · 候补 {{detail.waitlistCount}}</text>
+      </view>
+    </view>
+    <view class="info-line desc-line" wx:if="{{detail.description}}">
+      <text class="desc-label">活动说明：</text>{{detail.description}}
+    </view>
+  </view>
+
+  <!-- confirmed roster -->
+  <view class="card">
+    <view class="section-title">正式名单（{{detail.confirmedCount}}/{{detail.capacity}}）</view>
+    <block wx:if="{{detail.confirmed.length}}">
+      <view class="roster-item" wx:for="{{detail.confirmed}}" wx:key="openid">
+        <text class="roster-no">{{index + 1}}</text>
+        <image wx:if="{{item.avatarUrl}}" class="avatar" src="{{item.avatarUrl}}" />
+        <view wx:else class="avatar avatar-fallback">{{item.nickname ? item.nickname[0] : '?'}}</view>
+        <text class="roster-name">{{item.nickname}}</text>
+        <text wx:if="{{item.openid === detail.createdBy}}" class="tag tag-open">发起人</text>
+      </view>
+    </block>
+    <view wx:else class="muted" style="padding:8rpx 0;">还没有人报名</view>
+  </view>
+
+  <!-- waitlist -->
+  <view class="card" wx:if="{{detail.waitlist.length}}">
+    <view class="section-title">候补名单（{{detail.waitlistCount}}）</view>
+    <view class="roster-item" wx:for="{{detail.waitlist}}" wx:key="openid">
+      <text class="roster-no muted">{{index + 1}}</text>
+      <image wx:if="{{item.avatarUrl}}" class="avatar" src="{{item.avatarUrl}}" />
+      <view wx:else class="avatar avatar-fallback">{{item.nickname ? item.nickname[0] : '?'}}</view>
+      <text class="roster-name">{{item.nickname}}</text>
+      <text class="muted">候补</text>
+    </view>
+  </view>
+
+  <!-- invite QR -->
+  <view class="card qr-card">
+    <view class="section-title">邀请报名</view>
+    <view class="qr-wrap">
+      <image
+        class="qr-img"
+        src="{{qrcodeUrl}}"
+        mode="aspectFit"
+        show-menu-by-longpress="{{true}}"
+      />
+    </view>
+    <view class="muted qr-tip">扫一扫二维码，或转发给微信好友，对方即可报名</view>
+    <view class="row qr-actions">
+      <button class="btn btn-ghost qr-btn" bindtap="saveQrToAlbum">保存二维码</button>
+      <button class="btn btn-primary qr-btn" open-type="share">转发给好友</button>
+    </view>
+  </view>
+
+  <!-- my status + actions -->
+  <view class="action-bar">
+    <block wx:if="{{detail.myStatus === 'confirmed'}}">
+      <view class="my-status confirmed">✓ 你已报名（正式名额）</view>
+      <button class="btn btn-danger" bindtap="doCancel">取消报名</button>
+    </block>
+    <block wx:elif="{{detail.myStatus === 'waitlist'}}">
+      <view class="my-status waitlist">你排在候补第 {{myWaitPos}} 位，有人取消时自动上位</view>
+      <button class="btn btn-danger" bindtap="doCancel">取消候补</button>
+    </block>
+    <block wx:elif="{{detail.status === 'closed'}}">
+      <button class="btn btn-ghost" disabled>报名已关闭</button>
+    </block>
+    <block wx:elif="{{isPast}}">
+      <button class="btn btn-ghost" disabled>活动已开始</button>
+    </block>
+    <block wx:else>
+      <button class="btn btn-primary" bindtap="doRegister">
+        {{detail.confirmedCount >= detail.capacity ? '加入候补' : '立即报名'}}
+      </button>
+    </block>
+
+    <button wx:if="{{isCreator}}" class="btn btn-ghost" style="margin-top:18rpx;" bindtap="toggleStatus">
+      {{detail.status === 'open' ? '关闭报名' : '重新开放报名'}}
+    </button>
+    <button wx:if="{{isCreator}}" class="btn btn-danger" style="margin-top:18rpx;" bindtap="deleteActivity">
+      删除活动
+    </button>
+  </view>
+</view>
+
+<view wx:elif="{{!loading}}" class="empty">活动不存在或已被删除</view>

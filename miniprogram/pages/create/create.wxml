@@ -1,0 +1,75 @@
+<view class="container">
+  <view class="card">
+    <view class="field">
+      <view class="field-label">活动标题 *</view>
+      <input
+        class="input"
+        placeholder="如：周三晚奥体打球"
+        maxlength="40"
+        value="{{title}}"
+        data-field="title"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="field">
+      <view class="field-label">地点</view>
+      <input
+        class="input"
+        placeholder="如：奥体中心 5 号场地"
+        maxlength="60"
+        value="{{location}}"
+        data-field="location"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="field">
+      <view class="field-label">开始时间 *</view>
+      <picker mode="date" value="{{startDate}}" start="{{todayDate}}" bindchange="onStartDateChange" class="dt-picker">
+        <view class="input">{{startDate || '选择日期'}}</view>
+      </picker>
+      <picker mode="time" value="{{startTime}}" bindchange="onStartTimeChange" class="dt-picker dt-picker-gap">
+        <view class="input">{{startTime}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <view class="field-label">结束时间（可选）</view>
+      <picker mode="date" value="{{endDate}}" start="{{todayDate}}" bindchange="onEndDateChange" class="dt-picker">
+        <view class="input">{{endDate || '选择日期'}}</view>
+      </picker>
+      <picker mode="time" value="{{endTime}}" bindchange="onEndTimeChange" class="dt-picker dt-picker-gap">
+        <view class="input">{{endTime}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <view class="field-label">名额 *</view>
+      <input
+        class="input"
+        type="number"
+        placeholder="如 8"
+        value="{{capacity}}"
+        bindinput="onCapacity"
+      />
+      <view class="muted" style="margin-top:10rpx;">超过名额的报名将自动进入候补</view>
+    </view>
+
+    <view class="field">
+      <view class="field-label">活动说明（可选）</view>
+      <textarea
+        class="input"
+        style="height:140rpx;"
+        placeholder="费用分摊、水平要求、注意事项等"
+        maxlength="200"
+        value="{{description}}"
+        data-field="description"
+        bindinput="onInput"
+      />
+      <view class="muted" style="margin-top:10rpx;">填写后将在活动详情的日期与报名状态之后展示</view>
+    </view>
+  </view>
+
+  <button class="btn btn-primary" bindtap="submit" disabled="{{submitting}}">发起活动</button>
+</view>
