@@ -78,11 +78,11 @@
       </picker>
       <view wx:if="{{repeatMode !== 0}}" class="row" style="margin-top:16rpx;align-items:center;">
         <text class="muted" style="width:160rpx;">生成场数</text>
-        <input class="input" style="flex:1;" type="number" value="{{repeatCount}}" bindinput="onRepeatCountChange" />
+        <input class="input" style="flex:1;" type="number" value="{{repeatCount}}" bindinput="onRepeatCountChange" bindblur="onRepeatCountBlur" />
       </view>
       <view wx:if="{{repeatMode === 3}}" class="row" style="margin-top:12rpx;align-items:center;">
         <text class="muted" style="width:160rpx;">间隔天数</text>
-        <input class="input" style="flex:1;" type="number" value="{{customStep}}" bindinput="onCustomStepChange" />
+        <input class="input" style="flex:1;" type="number" value="{{customStep}}" bindinput="onCustomStepChange" bindblur="onCustomStepBlur" />
       </view>
       <view wx:if="{{repeatMode !== 0}}" class="muted" style="margin-top:10rpx;">将按所选间隔一次性生成多场（同标题/地点/名额），最多 12 场</view>
     </view>

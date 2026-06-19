@@ -107,13 +107,23 @@ Page({
   onRepeatChange(e) {
     this.setData({ repeatMode: Number(e.detail.value) });
   },
+  // Free-typing while focused (store the raw string so the user can clear &
+  // edit naturally); normalize on blur. Clamping on every input keystroke with
+  // a controlled value makes intermediate states unreachable (the "1" you can't
+  // delete) — see onRepeatCountBlur.
   onRepeatCountChange(e) {
+    this.setData({ repeatCount: e.detail.value });
+  },
+  onRepeatCountBlur(e) {
     let v = parseInt(e.detail.value, 10);
     if (isNaN(v) || v < 1) v = 1;
     if (v > 12) v = 12;
     this.setData({ repeatCount: v });
   },
   onCustomStepChange(e) {
+    this.setData({ customStep: e.detail.value });
+  },
+  onCustomStepBlur(e) {
     let v = parseInt(e.detail.value, 10);
     if (isNaN(v) || v < 1) v = 1;
     this.setData({ customStep: v });
@@ -124,8 +134,12 @@ Page({
     const d = this.data;
     const mode = d.repeatMode;
     if (mode === 0) return null;
-    const stepDays = mode === 1 ? 1 : mode === 2 ? 7 : Math.max(1, d.customStep || 7);
-    return { count: Math.max(1, d.repeatCount || 1), stepDays };
+    let count = parseInt(d.repeatCount, 10);
+    if (isNaN(count) || count < 1) count = 1;
+    if (count > 12) count = 12;
+    let stepDays = mode === 1 ? 1 : mode === 2 ? 7 : parseInt(d.customStep, 10);
+    if (isNaN(stepDays) || stepDays < 1) stepDays = 7;
+    return { count, stepDays };
   },
 
   // Explicit per-field change handlers for the date/time pickers — avoids any
