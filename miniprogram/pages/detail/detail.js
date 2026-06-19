@@ -205,4 +205,100 @@ Page({
       wx.showToast({ title: '保存失败', icon: 'none' });
     }
   },
+
+  async generatePoster() {
+    const d = this.data.detail;
+    if (!d) return;
+    wx.showLoading({ title: '生成中' });
+    try {
+      // 1. 拉二维码图
+      const dl = await new Promise((res, rej) =>
+        wx.downloadFile({ url: this.data.qrcodeUrl, success: res, fail: rej })
+      );
+      // 2. 取 canvas 节点
+      const { canvas, ctx, W, H } = await new Promise((res, rej) => {
+        wx.createSelectorQuery()
+          .select('#poster')
+          .fields({ node: true, size: true })
+          .exec((r) => (r && r[0] && r[0].node ? res(r[0]) : rej(new Error('canvas 不存在'))));
+      }).then((info) => {
+        const c = info.node;
+        const ctx = c.getContext('2d');
+        const dpr = wx.getSystemInfoSync().pixelRatio;
+        c.width = info.width * dpr;
+        c.height = info.height * dpr;
+        ctx.scale(dpr, dpr);
+        return { canvas: c, ctx, W: info.width, H: info.height };
+      });
+
+      // 3. 运动主题背景：绿渐变 + 🏸 水印
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#16a34a');
+      g.addColorStop(1, '#065f46');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.font = '120px sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillText('🏸', W - 150, 170);
+
+      // 4. 文案
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 30px sans-serif';
+      this._wrapText(ctx, d.title || '羽毛球活动', 36, 90, W - 72, 38);
+      ctx.font = '22px sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      let y = 220;
+      ctx.fillText('⏰ ' + d.timeText, 36, y);
+      y += 36;
+      if (d.location) {
+        ctx.fillText('📍 ' + d.location, 36, y);
+        y += 36;
+      }
+      ctx.fillText('名额 ' + d.confirmedCount + '/' + d.capacity, 36, y);
+
+      // 5. 二维码（加载图片后绘制并导出）
+      const img = canvas.createImage();
+      img.onload = () => {
+        ctx.drawImage(img, W - 200, H - 230, 164, 164);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.font = '18px sans-serif';
+        ctx.fillText('扫码报名', W - 180, H - 44);
+        wx.canvasToTempFilePath({
+          canvas,
+          success: (out) => {
+            wx.hideLoading();
+            wx.previewImage({ urls: [out.tempFilePath] }); // 长按可保存/分享
+          },
+          fail: () => {
+            wx.hideLoading();
+            wx.showToast({ title: '生成失败', icon: 'none' });
+          },
+        });
+      };
+      img.onerror = () => {
+        wx.hideLoading();
+        wx.showToast({ title: '二维码加载失败', icon: 'none' });
+      };
+      img.src = dl.tempFilePath;
+    } catch (e) {
+      wx.hideLoading();
+      wx.showToast({ title: e.message || '生成失败', icon: 'none' });
+    }
+  },
+
+  _wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+    // 简易中文换行（按字符）
+    let line = '';
+    for (const ch of String(text)) {
+      const test = line + ch;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line, x, y);
+        line = ch;
+        y += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, x, y);
+  },
 });

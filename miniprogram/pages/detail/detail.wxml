@@ -67,6 +67,7 @@
       <button class="btn btn-ghost qr-btn" bindtap="saveQrToAlbum">保存二维码</button>
       <button class="btn btn-primary qr-btn" open-type="share">转发给好友</button>
     </view>
+    <button class="btn btn-ghost" style="margin-top:18rpx;" bindtap="generatePoster">生成活动海报</button>
   </view>
 
   <!-- my status + actions -->
@@ -99,5 +100,8 @@
     </button>
   </view>
 </view>
+
+<!-- 离屏海报画布（不可见，仅用于导出图片） -->
+<canvas type="2d" id="poster" class="poster-canvas"></canvas>
 
 <view wx:elif="{{!loading}}" class="empty">活动不存在或已被删除</view>

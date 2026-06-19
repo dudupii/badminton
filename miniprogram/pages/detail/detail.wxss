@@ -114,3 +114,13 @@
   width: auto;
   margin: 0 8rpx;
 }
+
+/* Off-screen canvas for poster export (hidden off-screen, not via wx:if,
+   which would prevent selectorQuery from resolving the node). */
+.poster-canvas {
+  position: fixed;
+  left: -9999rpx;
+  top: 0;
+  width: 600rpx;
+  height: 900rpx;
+}
