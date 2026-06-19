@@ -16,6 +16,7 @@
         <text wx:if="{{detail.waitlistCount}}" class="muted"> · 候补 {{detail.waitlistCount}}</text>
       </view>
     </view>
+    <view wx:if="{{genderCount.male || genderCount.female}}" class="muted" style="margin-top:6rpx;font-size:24rpx;">男 {{genderCount.male}} · 女 {{genderCount.female}}</view>
     <view class="info-line desc-line" wx:if="{{detail.description}}">
       <text class="desc-label">活动说明：</text>{{detail.description}}
     </view>
@@ -30,6 +31,8 @@
         <image wx:if="{{item.avatarUrl}}" class="avatar" src="{{item.avatarUrl}}" />
         <view wx:else class="avatar avatar-fallback">{{item.nickname ? item.nickname[0] : '?'}}</view>
         <text class="roster-name">{{item.nickname}}</text>
+        <text wx:if="{{item.level}}" class="tag tag-level">{{item.level}}</text>
+        <text wx:if="{{item.gender}}" class="tag tag-gender tag-gender-{{item.gender}}">{{item.gender}}</text>
         <text wx:if="{{item.openid === detail.createdBy}}" class="tag tag-open">发起人</text>
       </view>
     </block>

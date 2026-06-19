@@ -15,6 +15,7 @@ Page({
     canCancel: false,
     isPast: false,
     myWaitPos: 0,
+    genderCount: { male: 0, female: 0 },
   },
 
   onLoad(q) {
@@ -65,6 +66,10 @@ Page({
         myWaitPos,
         canRegister: !myStatus && d.status === 'open' && !isPast,
         canCancel: !!myStatus,
+        genderCount: {
+          male: d.confirmed.filter((x) => x.gender === '男').length,
+          female: d.confirmed.filter((x) => x.gender === '女').length,
+        },
       });
     } catch (e) {
       this.setData({ loading: false });

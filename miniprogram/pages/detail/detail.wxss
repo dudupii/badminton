@@ -35,6 +35,23 @@
   flex: 1;
   margin-left: 18rpx;
 }
+.tag-level {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.tag-gender {
+  background: #f3f4f6;
+  color: #6b7280;
+  margin-left: 8rpx;
+}
+.tag-gender-男 {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.tag-gender-女 {
+  background: #fce7f3;
+  color: #be185d;
+}
 .avatar {
   width: 56rpx;
   height: 56rpx;
