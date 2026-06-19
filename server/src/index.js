@@ -97,7 +97,18 @@ app.get('/api/activities', wrap(async () => logic.listActivities(store)));
 app.post(
   '/api/activities',
   requireAuth,
-  wrap(async (req) => logic.createActivity(store, req.body || {}, req.user.openid))
+  wrap(async (req) => {
+    const body = req.body || {};
+    const repeat = body.repeat;
+    if (repeat && Number(repeat.count) > 1) {
+      const list = await logic.createRecurring(store, body, req.user.openid, {
+        count: repeat.count,
+        stepDays: repeat.stepDays || 7,
+      });
+      return { activities: list };
+    }
+    return logic.createActivity(store, body, req.user.openid);
+  })
 );
 
 app.get(

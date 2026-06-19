@@ -156,6 +156,33 @@ async function createActivity(store, input, creatorOpenid, now = Date.now()) {
   });
 }
 
+// Create `count` copies of an activity spaced `stepDays` apart (same weekday &
+// time when stepDays is a multiple of 7). Used for recurring weekly sessions.
+// Each instance is a separate activity with its own invite code; base-field
+// validation runs per-instance via createActivity.
+async function createRecurring(store, input, creatorOpenid, { count, stepDays }) {
+  const n = Number(count);
+  const step = Number(stepDays);
+  if (!Number.isInteger(n) || n < 1) throw httpError(400, '场数需为正整数');
+  if (n > 12) throw httpError(400, '一次最多生成 12 场');
+  if (!Number.isInteger(step) || step < 1) throw httpError(400, '周期天数需为正整数');
+
+  const baseStart = toMs(input.startTime);
+  if (!baseStart) throw httpError(400, '请填写有效的开始时间');
+  const hasEnd = input.endTime !== undefined && input.endTime !== null && input.endTime !== '';
+  const baseEnd = hasEnd ? toMs(input.endTime) : null;
+  if (hasEnd && !baseEnd) throw httpError(400, '结束时间无效');
+
+  const stepMs = step * 24 * 60 * 60 * 1000;
+  const created = [];
+  for (let i = 0; i < n; i++) {
+    const instance = { ...input, startTime: baseStart + i * stepMs };
+    if (hasEnd) instance.endTime = baseEnd + i * stepMs;
+    created.push(await createActivity(store, instance, creatorOpenid));
+  }
+  return created;
+}
+
 async function listActivities(store) {
   const state = store.snapshot();
   return Object.values(state.activities)
@@ -376,6 +403,7 @@ module.exports = {
   consumeSubscription,
   updateProfile,
   createActivity,
+  createRecurring,
   listActivities,
   getActivity,
   getActivityByCode,

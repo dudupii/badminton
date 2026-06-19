@@ -25,6 +25,10 @@ Page({
     todayDate: '',
     submitting: false,
     editId: '', // when set, the form edits this activity instead of creating
+    repeatMode: 0, // 0=不重复 1=每天 2=每周 3=自定义
+    repeatOptions: ['不重复', '每天', '每周', '自定义'],
+    repeatCount: 4, // how many sessions when repeating
+    customStep: 7, // days between sessions when 自定义
   },
 
   onLoad(q) {
@@ -100,6 +104,30 @@ Page({
     this.setData({ capacity: v });
   },
 
+  onRepeatChange(e) {
+    this.setData({ repeatMode: Number(e.detail.value) });
+  },
+  onRepeatCountChange(e) {
+    let v = parseInt(e.detail.value, 10);
+    if (isNaN(v) || v < 1) v = 1;
+    if (v > 12) v = 12;
+    this.setData({ repeatCount: v });
+  },
+  onCustomStepChange(e) {
+    let v = parseInt(e.detail.value, 10);
+    if (isNaN(v) || v < 1) v = 1;
+    this.setData({ customStep: v });
+  },
+
+  // Translate the repeat picker into a {count, stepDays} payload (or null).
+  buildRepeat() {
+    const d = this.data;
+    const mode = d.repeatMode;
+    if (mode === 0) return null;
+    const stepDays = mode === 1 ? 1 : mode === 2 ? 7 : Math.max(1, d.customStep || 7);
+    return { count: Math.max(1, d.repeatCount || 1), stepDays };
+  },
+
   // Explicit per-field change handlers for the date/time pickers — avoids any
   // ambiguity from computed-key setData and keeps the tap target reliable.
   onStartDateChange(e) {
@@ -142,6 +170,8 @@ Page({
       endTime,
       capacity: Number(d.capacity),
     };
+    const repeat = d.editId ? null : this.buildRepeat();
+    if (repeat) payload.repeat = repeat;
 
     this.setData({ submitting: true });
     wx.showLoading({ title: d.editId ? '保存中' : '创建中' });
@@ -152,13 +182,18 @@ Page({
         wx.showToast({ title: '已保存', icon: 'success' });
         setTimeout(() => wx.navigateBack(), 600);
       } else {
-        const created = await request('POST', '/api/activities', payload);
+        const res = await request('POST', '/api/activities', payload);
         wx.hideLoading();
-        wx.showToast({ title: '创建成功', icon: 'success' });
-        // Jump to the detail page so the organizer can grab / share the QR.
-        setTimeout(() => {
-          wx.redirectTo({ url: '/pages/detail/detail?id=' + created.id });
-        }, 800);
+        if (res && res.activities) {
+          wx.showToast({ title: '已创建 ' + res.activities.length + ' 场', icon: 'success' });
+          setTimeout(() => wx.switchTab({ url: '/pages/index/index' }), 800);
+        } else {
+          wx.showToast({ title: '创建成功', icon: 'success' });
+          // Jump to the detail page so the organizer can grab / share the QR.
+          setTimeout(() => {
+            wx.redirectTo({ url: '/pages/detail/detail?id=' + res.id });
+          }, 800);
+        }
       }
     } catch (e) {
       wx.hideLoading();

@@ -271,6 +271,36 @@ test('updateActivity: validates title and startTime', async () => {
   assert.equal(u.startTime, Date.parse('2099-08-01T09:00:00'));
 });
 
+test('createRecurring generates N activities spaced by stepDays, each with a unique code', async () => {
+  const store = tmpStore();
+  const list = await logic.createRecurring(
+    store,
+    { title: '周场', startTime: '2099-01-01T10:00:00', endTime: '2099-01-01T12:00:00', capacity: 4 },
+    'org',
+    { count: 3, stepDays: 7 }
+  );
+  assert.equal(list.length, 3);
+  const t0 = Date.parse('2099-01-01T10:00:00');
+  assert.equal(list[0].startTime, t0);
+  assert.equal(list[1].startTime, t0 + 7 * 86400000);
+  assert.equal(list[2].startTime, t0 + 14 * 86400000);
+  // endTime tracks the same spacing
+  const e0 = Date.parse('2099-01-01T12:00:00');
+  assert.equal(list[2].endTime, e0 + 14 * 86400000);
+  // distinct invite codes
+  assert.equal(new Set(list.map((a) => a.code)).size, 3);
+});
+
+test('createRecurring validates count and stepDays', async () => {
+  const store = tmpStore();
+  const base = { title: 'x', startTime: '2099-01-01T10:00:00', capacity: 1 };
+  await withError(400, logic.createRecurring(store, base, 'org', { count: 0, stepDays: 7 }));
+  await withError(400, logic.createRecurring(store, base, 'org', { count: 13, stepDays: 7 })); // cap 12
+  await withError(400, logic.createRecurring(store, base, 'org', { count: 2, stepDays: 0 }));
+  // also surfaces base-field errors (title)
+  await withError(400, logic.createRecurring(store, { startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', { count: 2, stepDays: 7 }));
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.
