@@ -371,6 +371,40 @@ async function cancel(store, activityId, openid, now = Date.now()) {
   });
 }
 
+// --- pre-start reminders (driven by a scheduler sweep in index.js) ---------
+
+// Open activities whose start falls inside (now, now+leadMs] and that haven't
+// been reminded yet. Read-only (no lock needed).
+function findActivitiesNeedingReminder(store, { now, leadMs }) {
+  const state = store.snapshot();
+  return Object.values(state.activities)
+    .filter((a) => a.status === 'open' && !a.remindedAt && a.startTime > now && a.startTime <= now + leadMs)
+    .map((a) => a.id);
+}
+
+// For one activity, consume one reminder credit from each non-cancelled
+// registrant who has one (for `templateId`), mark the activity as reminded,
+// and return the openids to actually message. Atomic; the caller does the
+// (non-fatal) network sends. Returns [] once already reminded.
+async function sendReminders(store, activityId, templateId, { now }) {
+  return store.txn((state) => {
+    const a = state.activities[activityId];
+    if (!a || a.remindedAt) return [];
+    const targets = [];
+    for (const r of state.registrations) {
+      if (r.activityId !== activityId || r.status === 'cancelled') continue;
+      const u = state.users[r.openid];
+      if (u && u.subs && u.subs[templateId]) {
+        u.subs[templateId] -= 1;
+        if (u.subs[templateId] <= 0) delete u.subs[templateId];
+        targets.push({ openid: r.openid });
+      }
+    }
+    a.remindedAt = now;
+    return targets;
+  });
+}
+
 // All of a user's active registrations, joined with activity info.
 async function myRegistrations(store, openid) {
   const state = store.snapshot();
@@ -412,6 +446,8 @@ module.exports = {
   deleteActivity,
   register,
   cancel,
+  findActivitiesNeedingReminder,
+  sendReminders,
   myRegistrations,
   myCreatedActivities,
 };

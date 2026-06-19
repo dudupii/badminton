@@ -78,24 +78,37 @@ Page({
   },
 
   async doRegister() {
-    const tpl = SUBSCRIBE_TEMPLATES.promote;
-    // 先请求「上位通知」一次性订阅授权（用户可拒绝，不影响报名）
+    // Real (non-placeholder) templates the user may authorize in one prompt.
+    const tpls = ['promote', 'registered', 'remind']
+      .map((k) => SUBSCRIBE_TEMPLATES[k])
+      .filter((t) => t && !t.endsWith('_TPL_ID'));
     let accepted = null;
-    if (tpl && tpl !== 'PROMOTE_TPL_ID') {
+    if (tpls.length) {
       try {
         accepted = await new Promise((res) =>
-          wx.requestSubscribeMessage({ tmplIds: [tpl], success: res, fail: () => res(null) })
+          wx.requestSubscribeMessage({ tmplIds: tpls, success: res, fail: () => res(null) })
         );
       } catch (e) {
         accepted = null;
       }
     }
+    const give = (tpl) =>
+      accepted && accepted[tpl] === 'accept'
+        ? request('POST', '/api/subscriptions', { templateId: tpl }).catch(() => {})
+        : Promise.resolve();
     try {
+      // Grant the "registered" credit BEFORE register so the route can consume
+      // it and send the success message in the same request.
+      if (accepted && accepted[SUBSCRIBE_TEMPLATES.registered] === 'accept') {
+        await give(SUBSCRIBE_TEMPLATES.registered);
+      }
       const r = await request('POST', '/api/activities/' + this.data.id + '/register');
-      if (accepted && accepted[tpl] === 'accept') {
-        try {
-          await request('POST', '/api/subscriptions', { templateId: tpl });
-        } catch (e) {}
+      // Future-event credits (promotion / reminder) are granted after success.
+      if (accepted && accepted[SUBSCRIBE_TEMPLATES.promote] === 'accept') {
+        await give(SUBSCRIBE_TEMPLATES.promote);
+      }
+      if (accepted && accepted[SUBSCRIBE_TEMPLATES.remind] === 'accept') {
+        await give(SUBSCRIBE_TEMPLATES.remind);
       }
       wx.showToast({ title: r.message, icon: 'none', duration: 2000 });
       this.load();

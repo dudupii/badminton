@@ -47,9 +47,10 @@ const config = {
     // devUserId from the client to give a persistent identity offline.
     devMode: !(process.env.WX_APPID && process.env.WX_SECRET),
     // Subscribe-message template ids (create in MP console → 订阅消息).
-    // promoteTpl: sent when a waitlisted user is auto-promoted.
     subscribeTemplates: {
-      promote: process.env.WX_PROMOTE_TPL || '',
+      promote: process.env.WX_PROMOTE_TPL || '', // 候补自动上位
+      registered: process.env.WX_REGISTERED_TPL || '', // 报名成功
+      remind: process.env.WX_REMIND_TPL || '', // 活动开始前提醒
     },
   },
 };

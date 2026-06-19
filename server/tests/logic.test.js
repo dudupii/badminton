@@ -301,6 +301,37 @@ test('createRecurring validates count and stepDays', async () => {
   await withError(400, logic.createRecurring(store, { startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', { count: 2, stepDays: 7 }));
 });
 
+test('findActivitiesNeedingReminder picks open activities within the lead window', async () => {
+  const store = tmpStore();
+  const NOW = 1_000_000;
+  const soon = await logic.createActivity(store, { title: 'soon', startTime: NOW + 3_600_000, capacity: 2 }, 'org', NOW); // +1h
+  await logic.createActivity(store, { title: 'far', startTime: NOW + 100 * 3_600_000, capacity: 2 }, 'org', NOW); // +100h (>24h)
+  await logic.createActivity(store, { title: 'past', startTime: NOW - 3_600_000, capacity: 2 }, 'org', NOW); // -1h
+  const leadMs = 24 * 3_600_000;
+  let ids = logic.findActivitiesNeedingReminder(store, { now: NOW, leadMs });
+  assert.deepEqual(ids, [soon.id]);
+
+  // mark soon as reminded → it drops out
+  await logic.sendReminders(store, soon.id, 'TPL_REMIND', { now: NOW + 10 });
+  ids = logic.findActivitiesNeedingReminder(store, { now: NOW, leadMs });
+  assert.deepEqual(ids, []);
+});
+
+test('sendReminders consumes credits of registered users, returns targets, fires once', async () => {
+  const store = tmpStore();
+  const NOW = 5_000_000;
+  const act = await logic.createActivity(store, { title: 'r', startTime: NOW + 3_600_000, capacity: 5 }, 'org', NOW);
+  await logic.register(store, act.id, 'u1', NOW + 1);
+  await logic.register(store, act.id, 'u2', NOW + 2);
+  await logic.addSubscription(store, 'u1', 'TPL_REMIND'); // u1 has credit, u2 does not
+
+  const t1 = await logic.sendReminders(store, act.id, 'TPL_REMIND', { now: NOW + 10 });
+  assert.deepEqual(t1.map((t) => t.openid), ['u1']); // only the credited user
+
+  const t2 = await logic.sendReminders(store, act.id, 'TPL_REMIND', { now: NOW + 11 });
+  assert.deepEqual(t2, []); // already reminded → no-op
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

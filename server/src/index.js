@@ -193,7 +193,32 @@ app.delete(
 app.post(
   '/api/activities/:id/register',
   requireAuth,
-  wrap(async (req) => logic.register(store, req.params.id, req.user.openid))
+  wrap(async (req) => {
+    const result = await logic.register(store, req.params.id, req.user.openid);
+    // Optional "registration success" subscribe message (one-time credit).
+    const tpl = config.wx.subscribeTemplates.registered;
+    if (tpl && !config.wx.devMode) {
+      const acted = await logic.consumeSubscription(store, req.user.openid, tpl);
+      if (acted) {
+        const a = store.snapshot().activities[req.params.id];
+        try {
+          await wxapi.sendSubscribeMessage(
+            req.user.openid,
+            tpl,
+            {
+              thing1: { value: a ? a.title : '活动' },
+              time2: { value: a ? new Date(a.startTime).toLocaleString('zh-CN') : '' },
+              thing3: { value: result.status === 'waitlist' ? '候补' : '正式' },
+            },
+            'pages/detail/detail?id=' + req.params.id
+          );
+        } catch (e) {
+          console.error('register notify failed:', e.message); // non-fatal
+        }
+      }
+    }
+    return result;
+  })
 );
 
 app.post(
@@ -233,6 +258,40 @@ app.get(
   wrap(async (req) => logic.myRegistrations(store, req.user.openid))
 );
 
+// --- pre-start reminder scheduler ------------------------------------------
+// Event-driven app otherwise has no timers; reminders need a periodic sweep.
+// Skips itself entirely in devMode or with no template configured.
+const REMIND_LEAD_MS = (Number(process.env.REMIND_LEAD_HOURS) || 24) * 3600000;
+const REMIND_INTERVAL_MS = (Number(process.env.REMIND_INTERVAL_SECONDS) || 300) * 1000;
+
+async function reminderSweep() {
+  const tpl = config.wx.subscribeTemplates.remind;
+  if (!tpl || config.wx.devMode) return;
+  const now = Date.now();
+  const ids = logic.findActivitiesNeedingReminder(store, { now, leadMs: REMIND_LEAD_MS });
+  for (const id of ids) {
+    const targets = await logic.sendReminders(store, id, tpl, { now });
+    if (!targets.length) continue;
+    const a = store.snapshot().activities[id];
+    for (const t of targets) {
+      try {
+        await wxapi.sendSubscribeMessage(
+          t.openid,
+          tpl,
+          {
+            thing1: { value: a ? a.title : '活动' },
+            time2: { value: a ? new Date(a.startTime).toLocaleString('zh-CN') : '' },
+            thing3: { value: a ? (a.location || '见详情') : '' },
+          },
+          'pages/detail/detail?id=' + id
+        );
+      } catch (e) {
+        console.error('remind send failed:', e.message); // non-fatal
+      }
+    }
+  }
+}
+
 // --- subscriptions (one-time subscribe-message credits) --------------------
 app.post(
   '/api/subscriptions',
@@ -248,6 +307,9 @@ if (require.main === module) {
     console.log(`🏸 badminton-server listening on ${config.host}:${config.port}`);
     console.log(`   devMode=${config.wx.devMode}  db=${config.dataFile}`);
   });
+  // Kick the reminder sweep periodically (and once shortly after boot).
+  setInterval(reminderSweep, REMIND_INTERVAL_MS).unref();
+  setTimeout(reminderSweep, 10000).unref();
 }
 
 module.exports = { app, store, logic };
