@@ -181,7 +181,32 @@ app.post(
 app.post(
   '/api/activities/:id/cancel',
   requireAuth,
-  wrap(async (req) => logic.cancel(store, req.params.id, req.user.openid))
+  wrap(async (req) => {
+    const result = await logic.cancel(store, req.params.id, req.user.openid);
+    // If someone was auto-promoted, notify them (event-driven, no scheduler).
+    if (result.promoted) {
+      const tpl = config.wx.subscribeTemplates.promote;
+      const acted = tpl && !config.wx.devMode && await logic.consumeSubscription(store, result.promoted.openid, tpl);
+      if (acted) {
+        const a = store.snapshot().activities[req.params.id];
+        try {
+          await wxapi.sendSubscribeMessage(
+            result.promoted.openid,
+            tpl,
+            {
+              thing1: { value: a ? a.title : '活动' },
+              time2: { value: a ? new Date(a.startTime).toLocaleString('zh-CN') : '' },
+              thing3: { value: a ? (a.location || '见详情') : '' },
+            },
+            'pages/detail/detail?id=' + req.params.id
+          );
+        } catch (e) {
+          console.error('promote notify failed:', e.message); // non-fatal
+        }
+      }
+    }
+    return result;
+  })
 );
 
 app.get(

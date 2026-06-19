@@ -69,4 +69,31 @@ async function getMiniProgramCode({ scene, page, width = 430 }) {
   throw err;
 }
 
-module.exports = { getAccessToken, getMiniProgramCode };
+// Send a one-time subscribe message. `data` keys must match the template's
+// field names (e.g. { thing1: { value: '...' }, time2: { value: '...' } }).
+async function sendSubscribeMessage(openid, templateId, data, page) {
+  const token = await getAccessToken();
+  const url = `https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${encodeURIComponent(token)}`;
+  const state = config.wx.envVersion === 'release' ? 'formal' : config.wx.envVersion === 'trial' ? 'trial' : 'developer';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      touser: openid,
+      template_id: templateId,
+      page,
+      data,
+      miniprogram_state: state,
+      lang: 'zh_CN',
+    }),
+  });
+  const j = await res.json();
+  if (j.errcode) {
+    const err = new Error(`subscribe send failed: ${JSON.stringify(j)}`);
+    err.detail = j;
+    throw err;
+  }
+  return j;
+}
+
+module.exports = { getAccessToken, getMiniProgramCode, sendSubscribeMessage };

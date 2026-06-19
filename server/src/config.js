@@ -46,6 +46,11 @@ const config = {
     // Dev mode = no real WeChat credentials. Login then accepts a stable
     // devUserId from the client to give a persistent identity offline.
     devMode: !(process.env.WX_APPID && process.env.WX_SECRET),
+    // Subscribe-message template ids (create in MP console → 订阅消息).
+    // promoteTpl: sent when a waitlisted user is auto-promoted.
+    subscribeTemplates: {
+      promote: process.env.WX_PROMOTE_TPL || '',
+    },
   },
 };
 
