@@ -139,6 +139,10 @@ Page({
     }
   },
 
+  goEdit() {
+    wx.navigateTo({ url: '/pages/create/create?id=' + this.data.id });
+  },
+
   async deleteActivity() {
     const confirm = await new Promise((resolve) => {
       wx.showModal({

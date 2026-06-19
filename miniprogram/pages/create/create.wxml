@@ -72,5 +72,5 @@
     </view>
   </view>
 
-  <button class="btn btn-primary" bindtap="submit" disabled="{{submitting}}">发起活动</button>
+  <button class="btn btn-primary" bindtap="submit" disabled="{{submitting}}">{{editId ? '保存修改' : '发起活动'}}</button>
 </view>

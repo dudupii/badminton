@@ -92,6 +92,9 @@
       </button>
     </block>
 
+    <button wx:if="{{isCreator}}" class="btn btn-ghost" style="margin-top:18rpx;" bindtap="goEdit">
+      编辑活动
+    </button>
     <button wx:if="{{isCreator}}" class="btn btn-ghost" style="margin-top:18rpx;" bindtap="toggleStatus">
       {{detail.status === 'open' ? '关闭报名' : '重新开放报名'}}
     </button>

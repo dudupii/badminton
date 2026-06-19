@@ -24,17 +24,44 @@ Page({
     endTime: '21:00',
     todayDate: '',
     submitting: false,
+    editId: '', // when set, the form edits this activity instead of creating
   },
 
-  onLoad() {
-    // Default to tomorrow so the activity is always future-dated and
+  onLoad(q) {
+    // Default to tomorrow so a new activity is always future-dated and
     // registerable, even late at night.
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
     this.setData({
       todayDate: dateStr(new Date()),
       startDate: dateStr(tomorrow),
       endDate: dateStr(tomorrow),
+      editId: (q && q.id) || '',
     });
+    if (q && q.id) this.loadForEdit(q.id);
+  },
+
+  // Prefill the form from an existing activity (edit mode).
+  async loadForEdit(id) {
+    try {
+      const a = await request('GET', '/api/activities/' + id);
+      const start = new Date(a.startTime);
+      const patch = {
+        title: a.title || '',
+        location: a.location || '',
+        description: a.description || '',
+        capacity: a.capacity,
+        startDate: dateStr(start),
+        startTime: timeStr(start),
+      };
+      if (a.endTime) {
+        const end = new Date(a.endTime);
+        patch.endDate = dateStr(end);
+        patch.endTime = timeStr(end);
+      }
+      this.setData(patch);
+    } catch (e) {
+      wx.showToast({ title: e.message || '加载失败', icon: 'none' });
+    }
   },
 
   async copyLast() {
@@ -96,7 +123,8 @@ Page({
 
     const start = new Date(d.startDate + 'T' + d.startTime + ':00');
     if (isNaN(start.getTime())) return wx.showToast({ title: '开始时间无效', icon: 'none' });
-    if (start.getTime() < Date.now()) {
+    // New activities must be future-dated; edits allow correcting a past time.
+    if (!d.editId && start.getTime() < Date.now()) {
       return wx.showToast({ title: '开始时间已过，请选择未来时间', icon: 'none' });
     }
 
@@ -106,23 +134,32 @@ Page({
       if (!isNaN(end.getTime())) endTime = end.toISOString();
     }
 
+    const payload = {
+      title: d.title.trim(),
+      location: d.location.trim(),
+      description: d.description.trim(),
+      startTime: start.toISOString(),
+      endTime,
+      capacity: Number(d.capacity),
+    };
+
     this.setData({ submitting: true });
-    wx.showLoading({ title: '创建中' });
+    wx.showLoading({ title: d.editId ? '保存中' : '创建中' });
     try {
-      const created = await request('POST', '/api/activities', {
-        title: d.title.trim(),
-        location: d.location.trim(),
-        description: d.description.trim(),
-        startTime: start.toISOString(),
-        endTime,
-        capacity: Number(d.capacity),
-      });
-      wx.hideLoading();
-      wx.showToast({ title: '创建成功', icon: 'success' });
-      // Jump to the detail page so the organizer can grab / share the QR.
-      setTimeout(() => {
-        wx.redirectTo({ url: '/pages/detail/detail?id=' + created.id });
-      }, 800);
+      if (d.editId) {
+        await request('PUT', '/api/activities/' + d.editId, payload);
+        wx.hideLoading();
+        wx.showToast({ title: '已保存', icon: 'success' });
+        setTimeout(() => wx.navigateBack(), 600);
+      } else {
+        const created = await request('POST', '/api/activities', payload);
+        wx.hideLoading();
+        wx.showToast({ title: '创建成功', icon: 'success' });
+        // Jump to the detail page so the organizer can grab / share the QR.
+        setTimeout(() => {
+          wx.redirectTo({ url: '/pages/detail/detail?id=' + created.id });
+        }, 800);
+      }
     } catch (e) {
       wx.hideLoading();
       this.setData({ submitting: false });

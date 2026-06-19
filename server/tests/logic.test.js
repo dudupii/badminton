@@ -238,6 +238,39 @@ test('subscription credits: add then consume', async () => {
   assert.equal(await logic.consumeSubscription(store, 'u1', 'TPL_A'), false); // no credit left
 });
 
+test('updateActivity: creator edits fields; only creator allowed; 404 unknown', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: '原标题', startTime: '2099-01-01T10:00:00', capacity: 4, location: '旧地点' }, 'org');
+  const updated = await logic.updateActivity(store, act.id, 'org', {
+    title: '新标题', location: '新地点', capacity: 6, description: '说明',
+  });
+  assert.equal(updated.title, '新标题');
+  assert.equal(updated.location, '新地点');
+  assert.equal(updated.capacity, 6);
+  assert.equal(updated.description, '说明');
+  await withError(403, logic.updateActivity(store, act.id, 'stranger', { title: 'X' }));
+  await withError(404, logic.updateActivity(store, 'act_nope', 'org', { title: 'X' }));
+});
+
+test('updateActivity: capacity cannot drop below current confirmed count', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 3 }, 'org');
+  await logic.register(store, act.id, 'u1', 1000);
+  await logic.register(store, act.id, 'u2', 2000); // 2 confirmed
+  await withError(400, logic.updateActivity(store, act.id, 'org', { capacity: 1 })); // < confirmed
+  const ok = await logic.updateActivity(store, act.id, 'org', { capacity: 2 }); // == confirmed OK
+  assert.equal(ok.capacity, 2);
+});
+
+test('updateActivity: validates title and startTime', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4 }, 'org');
+  await withError(400, logic.updateActivity(store, act.id, 'org', { title: '   ' }));
+  await withError(400, logic.updateActivity(store, act.id, 'org', { startTime: 'not-a-date' }));
+  const u = await logic.updateActivity(store, act.id, 'org', { startTime: '2099-08-01T09:00:00' });
+  assert.equal(u.startTime, Date.parse('2099-08-01T09:00:00'));
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

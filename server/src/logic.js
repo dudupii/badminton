@@ -221,6 +221,57 @@ async function setActivityStatus(store, id, status, actorOpenid) {
   });
 }
 
+// Edit an existing activity's content. Only the creator may edit. Capacity can
+// be lowered but never below the current confirmed headcount (would evict
+// people). Only fields present in `input` are touched.
+async function updateActivity(store, id, actorOpenid, input) {
+  // --- validate provided fields before entering the txn ------------------
+  let title;
+  if (input.title !== undefined) {
+    title = (input.title || '').trim();
+    if (!title) throw httpError(400, '请填写活动标题');
+  }
+  let capacity;
+  if (input.capacity !== undefined) {
+    capacity = Number(input.capacity);
+    if (!Number.isInteger(capacity) || capacity < 1) throw httpError(400, '名额需为大于 0 的整数');
+  }
+  let startTime;
+  if (input.startTime !== undefined) {
+    startTime = toMs(input.startTime);
+    if (!startTime) throw httpError(400, '请填写有效的开始时间');
+  }
+  let endTime;
+  if (input.endTime !== undefined) {
+    // null / '' clears the end time; otherwise parse.
+    endTime = input.endTime === null || input.endTime === '' ? null : toMs(input.endTime);
+    if (endTime === null ? false : !endTime) throw httpError(400, '结束时间无效');
+  }
+
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以编辑');
+
+    if (capacity !== undefined) {
+      const confirmedCount = state.registrations.filter(
+        (r) => r.activityId === id && r.status === 'confirmed'
+      ).length;
+      if (capacity < confirmedCount) {
+        throw httpError(400, `名额不能少于已正式报名人数（${confirmedCount}）`);
+      }
+    }
+
+    if (title !== undefined) a.title = title;
+    if (input.description !== undefined) a.description = (input.description || '').trim();
+    if (input.location !== undefined) a.location = (input.location || '').trim();
+    if (startTime !== undefined) a.startTime = startTime;
+    if (endTime !== undefined) a.endTime = endTime;
+    if (capacity !== undefined) a.capacity = capacity;
+    return publicActivity(a);
+  });
+}
+
 async function deleteActivity(store, id, actorOpenid) {
   return store.txn((state) => {
     const a = state.activities[id];
@@ -329,6 +380,7 @@ module.exports = {
   getActivity,
   getActivityByCode,
   setActivityStatus,
+  updateActivity,
   deleteActivity,
   register,
   cancel,

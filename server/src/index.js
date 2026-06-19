@@ -165,6 +165,13 @@ app.patch(
   })
 );
 
+// Edit activity content (title/time/place/capacity/description). Creator only.
+app.put(
+  '/api/activities/:id',
+  requireAuth,
+  wrap(async (req) => logic.updateActivity(store, req.params.id, req.user.openid, req.body || {}))
+);
+
 app.delete(
   '/api/activities/:id',
   requireAuth,
