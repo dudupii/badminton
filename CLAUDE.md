@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 这是什么
 
-羽毛球活动报名**微信小程序 + Node/Express 后端**。功能：发起活动（名额/时间）、用微信身份报名、名额满转候补、有人取消按 FIFO 自动上位、每个活动生成二维码供他人扫码报名。
+羽毛球活动报名**微信小程序 + Node/Express 后端**。功能：发起活动（名额/时间）、用微信身份报名、名额满转候补、有人取消按 FIFO 自动上位、每个活动生成二维码供他人扫码报名。Phase 1 加了组织者向四件套：**复制上一场**（`GET /api/activities/created-by/me`，+7 天顺延）、**候补上位订阅通知**（一次性订阅消息，事件驱动）、**水平/性别标签**（用户资料 + 名单徽章 + 男/女汇总）、**可分享运动主题海报**（canvas 2d）。
 
 仓库两部分：
 - `server/` — Express 后端（唯一运行时依赖 `express` + `qrcode`）。
@@ -21,7 +21,7 @@ npm test               # node --test tests/*.test.js（全部）
 node --test --test-name-pattern="候补" tests/logic.test.js   # 跑单个用例（按名称子串过滤）
 ```
 - 小程序需要后端在跑才能联调。
-- 配置走 `.env`（从 `.env.example` 拷贝）：`PORT`/`HOST`/`DATA_FILE`/`TOKEN_SECRET`/`WX_APPID`/`WX_SECRET`/`WX_ENV_VERSION`。
+- 配置走 `.env`（从 `.env.example` 拷贝）：`PORT`/`HOST`/`DATA_FILE`/`TOKEN_SECRET`/`WX_APPID`/`WX_SECRET`/`WX_ENV_VERSION`/`WX_PROMOTE_TPL`（候补上位订阅模板 id，可选）。
 - 没有 `WX_APPID`+`WX_SECRET` 时自动进 **devMode**（见下），无需任何微信凭证即可联调。
 
 小程序：用微信开发者工具导入**仓库根目录**（不是 `miniprogram/` 子目录）；`urlCheck:false` 已允许 HTTP 联调。本机装的是社区 Linux 移植版（msojocs），启动器 `~/bin/wechat-devtools`。
@@ -44,6 +44,12 @@ openid → HMAC-SHA256 自签 token（无 JWT 依赖）。前端 `utils/request.
 **邀请码与二维码（`src/wxapi.js` + `src/logic.js` 的 `code`/`getActivityByCode`）。** 每个活动有 6 位邀请码（作为小程序码的 `scene`）。二维码端点：生产调 `wxacode.getUnlimited` 生成可扫码进小程序的「小程序码」；devMode 用 `qrcode` 库生成占位码。扫码进入时详情页 `onLoad` 读 `options.scene` → 按 code 加载活动；普通跳转用 `options.id`。
 
 **前后端环境自动切换（`miniprogram/utils/config.js`）。** 用 `wx.getAccountInfoSync().miniProgram.envVersion`（develop/trial/release）自动选后端地址：`develop`→`DEV_URL`（开发机局域网 HTTP），`trial`/`release`→`PROD_URL`（公网 HTTPS）。发布前只需把 `PROD_URL` 改成正式域名。
+
+**Phase 1 四件套的实现要点：**
+- **水平/性别标签**：`user` schema 加 `level`/`gender`（枚举见 `logic.js` 顶部 `LEVELS`/`GENDERS`），`updateProfile` 校验枚举、`ensureUser` 给空默认值。`enrichActivity` 的每个名单 entry 带 `level`/`gender`，`GET /api/user/me` 也下发。前端 profile 用 `<picker>` 选择。
+- **复制上一场**：`myCreatedActivities(store, openid)` 按活动 `createdAt` 倒序返回发起人的活动（**注意：`createActivity` 接受可选 `now` 参数注入 `createdAt`，与 `register`/`cancel` 一致，专测用，避免同毫秒排序歧义**）。前端 `create.js` 取 `list[0]`，时间 +7 天（同星期同时段）回填表单。
+- **候补上位订阅**：订阅授权是一次性的——报名时前端 `wx.requestSubscribeMessage` 同意则 `POST /api/subscriptions` 给 `user.subs[templateId]` +1（`addSubscription`/`consumeSubscription`）。取消触发上位时，`POST /api/activities/:id/cancel` 路由层消费一次配额并调 `wxapi.sendSubscribeMessage`（**事件驱动、无定时器**；devMode 或模板未配不发送；发送失败非致命）。模板 id 双端配置：后端 `WX_PROMOTE_TPL`（`.env`）、前端 `SUBSCRIBE_TEMPLATES.promote`（`utils/config.js`，占位 `PROMOTE_TPL_ID` 未替换则跳过）。
+- **活动海报**：`detail.js` 的 `generatePoster` 用 canvas 2d 画绿渐变 + 🏸 + 文案 + 二维码，`wx.canvasToTempFilePath` 导出后 `wx.previewImage` 预览。`<canvas>` **必须放在最外层、不在 `wx:if` 内**（否则 `createSelectorQuery` 取不到 node），靠 CSS 推到屏外隐藏。真机测（模拟器 canvas 2d 偶有渲染差异）。
 
 ## 陷阱与非显而易见的事
 
