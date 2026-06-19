@@ -11,6 +11,10 @@
 - 🎨 **复制上一场**：一键带出历史活动，时间自动顺延 7 天（同星期同时段）
 - 🏷️ **水平 / 性别标签**：个人资料可选水平与性别，名单显示徽章并汇总男女人数
 - 🖼️ **活动海报**：详情页一键生成运动主题海报（绿底 + 🏸 + 信息 + 二维码），长按可保存/分享
+- ✏️ **活动编辑**：发起人可改已建活动的时间/地点/名额/说明（名额不可低于已正式人数）
+- 🔁 **周期活动**：发起时可选每天/每周/自定义间隔，一次生成连续多场（≤12 场）
+- 🔔 **订阅消息**：报名成功、候补上位、**活动开始前提醒**（定时调度，可配提前时长）
+- 🧑 **头像持久化**：选头像后上传后端保存，跨会话不丢（本地文件存储，生产可换对象存储）
 
 ```
 badminton/
@@ -61,6 +65,11 @@ cp .env.example .env
 #   WX_SECRET=你的小程序Secret
 #   WX_ENV_VERSION=release   # develop | trial | release（二维码进入的版本）
 #   TOKEN_SECRET=换成一长串随机字符串
+# 订阅消息模板（可选，见下）：
+#   WX_PROMOTE_TPL / WX_REGISTERED_TPL / WX_REMIND_TPL
+# 提醒调度（可选）：
+#   REMIND_LEAD_HOURS=24            # 活动开始前多久提醒
+#   REMIND_INTERVAL_SECONDS=300     # 调度扫描间隔
 ```
 
 ### 运行测试
@@ -94,16 +103,19 @@ npm test
 | GET  | `/api/user/me` | 当前用户信息（含 level/gender） | 必须 |
 | PATCH| `/api/user/me` | 更新昵称/头像/水平/性别 | 必须 |
 | GET  | `/api/activities` | 活动列表 | 公开 |
-| POST | `/api/activities` | 发起活动 | 必须 |
+| POST | `/api/activities` | 发起活动（可带 `repeat` 批量生成周期活动） | 必须 |
 | GET  | `/api/activities/created-by/me` | 我发起的活动（复制上一场用） | 必须 |
 | GET  | `/api/activities/:id` | 活动详情 + 名单 + 我的状态 | 可选 |
 | GET  | `/api/activities/by-code/:code` | 按**邀请码**查活动（扫码进入时用） | 可选 |
 | GET  | `/api/activities/:id/qrcode` | 活动二维码图片（`image/png`） | 公开 |
+| PUT  | `/api/activities/:id` | 编辑活动内容（标题/时间/地点/名额/说明） | 必须(发起人) |
 | PATCH| `/api/activities/:id` | 发起人关闭/重开报名 | 必须(发起人) |
-| POST | `/api/activities/:id/register` | 报名（满则候补） | 必须 |
+| POST | `/api/activities/:id/register` | 报名（满则候补；可选发报名成功订阅） | 必须 |
 | POST | `/api/activities/:id/cancel` | 取消报名（触发候补上位 + 上位订阅通知） | 必须 |
 | GET  | `/api/registrations/me` | 我的报名记录 | 必须 |
-| POST | `/api/subscriptions` | 记录一次性订阅授权（候补上位通知） | 必须 |
+| POST | `/api/subscriptions` | 记录一次性订阅授权（候补上位/报名成功/提醒） | 必须 |
+| POST | `/api/user/me/avatar` | 上传头像（base64，≤2MB） | 必须 |
+| GET  | `/avatars/:file` | 头像图片 | 公开 |
 
 ### 名额与候补规则
 
@@ -134,16 +146,22 @@ npm test
 ## 后续可扩展
 
 - 接入微信支付处理场地费分摊
-- 订阅消息：**候补上位通知已实现**；后续可加「报名成功」「活动开始前提醒」等模板
-- 头像持久化（当前 `chooseAvatar` 仅本地预览，需配合对象存储上传）
-- 管理员/群组权限；「复制上一场」之外的可配置周期模板
+- 头像存储从本地文件换为对象存储（COS/S3），支持 CDN 与多实例
+- 管理员/群组权限、群组内活动
+- 提醒调度器目前是单进程 `setInterval`；多实例部署需加分布式锁或外置调度
 
-### 候补上位订阅消息（可选，需生产凭证）
+### 订阅消息（可选，需生产凭证）
 
-取消正式名额触发候补上位时，后端会向上位者发送一次性订阅消息。启用需在**正式模式**（配置 `WX_APPID`/`WX_SECRET`）下：
+三个一次性订阅模板，事件驱动（候补上位、报名成功）或定时调度（活动前提醒）。启用需**正式模式**（配置 `WX_APPID`/`WX_SECRET`）：
 
-1. 小程序后台「订阅消息」创建模板，记下 `templateId`。
-2. 后端 `.env` 填 `WX_PROMOTE_TPL=<templateId>`，并按真实模板字段调整 `server/src/index.js` 里 `thing1/time2/thing3` 的字段名。
-3. 前端 `miniprogram/utils/config.js` 里把 `SUBSCRIBE_TEMPLATES.promote` 从占位 `PROMOTE_TPL_ID` 改成同一个 `templateId`。
+| 通知 | 触发 | 后端 env | 前端 config |
+|------|------|----------|-------------|
+| 候补上位 | 取消正式名额→自动上位时 | `WX_PROMOTE_TPL` | `SUBSCRIBE_TEMPLATES.promote` |
+| 报名成功 | 报名成功时（消耗报名时授权的配额） | `WX_REGISTERED_TPL` | `SUBSCRIBE_TEMPLATES.registered` |
+| 活动前提醒 | 定时扫描，活动开始前 `REMIND_LEAD_HOURS`(默认24h) 发一次 | `WX_REMIND_TPL` | `SUBSCRIBE_TEMPLATES.remind` |
 
-> 占位未替换 / 开发模式下，前端自动跳过订阅请求、后端不发送，不影响报名与上位逻辑。
+1. 小程序后台「订阅消息」创建对应模板，记下 `templateId`。
+2. 后端 `.env` 填上面的 env；按真实模板字段调整 `server/src/index.js` 里 `thing1/time2/thing3` 的字段名。
+3. 前端 `miniprogram/utils/config.js` 把对应 `SUBSCRIBE_TEMPLATES.*` 从占位改成同一个 `templateId`。
+
+> 占位未替换 / 开发模式下：前端自动跳过订阅请求、后端不发送（提醒调度器也自动跳过），不影响报名/上位/创建逻辑。提醒调度器是本应用唯一的定时器（`setInterval`），其余皆为事件驱动。
