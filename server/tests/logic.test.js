@@ -196,6 +196,19 @@ test('myRegistrations returns only active signups', async () => {
   assert.equal(mine[0].activity.id, b.id);
 });
 
+test('myCreatedActivities returns only my activities, newest first', async () => {
+  const store = tmpStore();
+  // Inject distinct `now` so createdAt ordering is deterministic (Date.now()
+  // can collide within the same millisecond for back-to-back creates).
+  await logic.createActivity(store, { title: 'A', startTime: '2099-01-01T10:00:00', capacity: 4 }, 'org', 1000);
+  await logic.createActivity(store, { title: 'B', startTime: '2099-02-01T10:00:00', capacity: 4 }, 'org', 2000);
+  await logic.createActivity(store, { title: 'C', startTime: '2099-03-01T10:00:00', capacity: 4 }, 'other', 3000);
+  const mine = await logic.myCreatedActivities(store, 'org');
+  assert.equal(mine.length, 2);
+  assert.deepEqual(mine.map((a) => a.title), ['B', 'A']); // newest first
+  assert.ok(mine[0].code, 'returns publicActivity shape with code');
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

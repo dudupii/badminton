@@ -101,6 +101,12 @@ app.post(
 );
 
 app.get(
+  '/api/activities/created-by/me',
+  requireAuth,
+  wrap(async (req) => logic.myCreatedActivities(store, req.user.openid))
+);
+
+app.get(
   '/api/activities/:id',
   optionalAuth,
   wrap(async (req) => logic.getActivity(store, req.params.id, req.user && req.user.openid))

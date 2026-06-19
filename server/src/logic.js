@@ -76,7 +76,7 @@ async function updateProfile(store, openid, { nickname, avatarUrl }) {
 
 // ---- activities ------------------------------------------------------------
 
-async function createActivity(store, input, creatorOpenid) {
+async function createActivity(store, input, creatorOpenid, now = Date.now()) {
   const title = (input.title || '').trim();
   if (!title) throw httpError(400, '请填写活动标题');
   const capacity = Number(input.capacity);
@@ -96,7 +96,7 @@ async function createActivity(store, input, creatorOpenid) {
       endTime,
       capacity,
       createdBy: creatorOpenid,
-      createdAt: Date.now(),
+      createdAt: now,
       status: 'open',
     };
     state.activities[activity.id] = activity;
@@ -253,6 +253,15 @@ async function myRegistrations(store, openid) {
     .sort((x, y) => x.activity.startTime - y.activity.startTime);
 }
 
+// A creator's own activities, newest first — used by "copy last activity".
+async function myCreatedActivities(store, openid) {
+  const state = store.snapshot();
+  return Object.values(state.activities)
+    .filter((a) => a.createdBy === openid)
+    .map(publicActivity)
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
 module.exports = {
   httpError,
   toMs,
@@ -267,4 +276,5 @@ module.exports = {
   register,
   cancel,
   myRegistrations,
+  myCreatedActivities,
 };
