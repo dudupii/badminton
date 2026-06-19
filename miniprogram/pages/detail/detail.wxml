@@ -32,7 +32,7 @@
         <view wx:else class="avatar avatar-fallback">{{item.nickname ? item.nickname[0] : '?'}}</view>
         <text class="roster-name">{{item.nickname}}</text>
         <text wx:if="{{item.level}}" class="tag tag-level">{{item.level}}</text>
-        <text wx:if="{{item.gender}}" class="tag tag-gender tag-gender-{{item.gender}}">{{item.gender}}</text>
+        <text wx:if="{{item.gender}}" class="tag tag-gender {{item.gender === '男' ? 'tg-male' : 'tg-female'}}">{{item.gender}}</text>
         <text wx:if="{{item.openid === detail.createdBy}}" class="tag tag-open">发起人</text>
       </view>
     </block>
@@ -101,7 +101,7 @@
   </view>
 </view>
 
-<!-- 离屏海报画布（不可见，仅用于导出图片） -->
-<canvas type="2d" id="poster" class="poster-canvas"></canvas>
-
 <view wx:elif="{{!loading}}" class="empty">活动不存在或已被删除</view>
+
+<!-- 离屏海报画布（不可见，仅用于导出图片）。放在 wx:if/wx:elif 链之后，避免打断两者相邻关系；本身是无条件渲染的离屏节点 -->
+<canvas type="2d" id="poster" class="poster-canvas"></canvas>

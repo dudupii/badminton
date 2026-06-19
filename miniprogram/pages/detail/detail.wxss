@@ -44,11 +44,12 @@
   color: #6b7280;
   margin-left: 8rpx;
 }
-.tag-gender-男 {
+/* ASCII modifier classes — WXSS rejects non-ASCII (e.g. 男/女) in selectors. */
+.tg-male {
   background: #dbeafe;
   color: #1d4ed8;
 }
-.tag-gender-女 {
+.tg-female {
   background: #fce7f3;
   color: #be185d;
 }
