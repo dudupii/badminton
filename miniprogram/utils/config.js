@@ -18,4 +18,9 @@ function detectEnv() {
 const ENV = detectEnv();
 const BASE_URL = ENV === 'release' || ENV === 'trial' ? PROD_URL : DEV_URL;
 
-module.exports = { BASE_URL, ENV, DEV_URL, PROD_URL };
+// 订阅消息模板 id（小程序后台「订阅消息」创建后填入）
+const SUBSCRIBE_TEMPLATES = {
+  promote: 'PROMOTE_TPL_ID', // ← 上线前替换为真实 templateId
+};
+
+module.exports = { BASE_URL, ENV, DEV_URL, PROD_URL, SUBSCRIBE_TEMPLATES };

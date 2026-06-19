@@ -1,6 +1,6 @@
 const { request } = require('../../utils/request');
 const { ensureLogin } = require('../../utils/auth');
-const { BASE_URL } = require('../../utils/config');
+const { BASE_URL, SUBSCRIBE_TEMPLATES } = require('../../utils/config');
 const fmt = require('../../utils/format');
 
 Page({
@@ -78,8 +78,25 @@ Page({
   },
 
   async doRegister() {
+    const tpl = SUBSCRIBE_TEMPLATES.promote;
+    // 先请求「上位通知」一次性订阅授权（用户可拒绝，不影响报名）
+    let accepted = null;
+    if (tpl && tpl !== 'PROMOTE_TPL_ID') {
+      try {
+        accepted = await new Promise((res) =>
+          wx.requestSubscribeMessage({ tmplIds: [tpl], success: res, fail: () => res(null) })
+        );
+      } catch (e) {
+        accepted = null;
+      }
+    }
     try {
       const r = await request('POST', '/api/activities/' + this.data.id + '/register');
+      if (accepted && accepted[tpl] === 'accept') {
+        try {
+          await request('POST', '/api/subscriptions', { templateId: tpl });
+        } catch (e) {}
+      }
       wx.showToast({ title: r.message, icon: 'none', duration: 2000 });
       this.load();
     } catch (e) {
