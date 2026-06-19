@@ -19,9 +19,14 @@ function wxLogin() {
 }
 
 // Ensures we have a valid session token. Cached in globalData + storage.
+// Short-circuits only when BOTH token and openid are cached — otherwise a
+// reload with a cached token would leave globalData.openid null (it's not in
+// the token), breaking any client-side creator/self check (isCreator, etc.).
 async function ensureLogin(opts) {
   const app = getApp();
-  if (app.globalData.token && !opts.force) return app.globalData.token;
+  if (app.globalData.token && app.globalData.openid && !opts.force) {
+    return app.globalData.token;
+  }
 
   const code = await wxLogin();
   const data = await request('POST', '/api/auth/login', {
@@ -31,6 +36,7 @@ async function ensureLogin(opts) {
   setToken(data.token);
   app.globalData.openid = data.user.openid;
   app.globalData.userInfo = data.user;
+  wx.setStorageSync('openid', data.user.openid);
   return data.token;
 }
 
