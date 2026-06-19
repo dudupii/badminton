@@ -209,6 +209,25 @@ test('myCreatedActivities returns only my activities, newest first', async () =>
   assert.ok(mine[0].code, 'returns publicActivity shape with code');
 });
 
+test('updateProfile sets level/gender and rejects invalid enums', async () => {
+  const store = tmpStore();
+  const u = await logic.updateProfile(store, 'u1', { level: '中级', gender: '男' });
+  assert.equal(u.level, '中级');
+  assert.equal(u.gender, '男');
+  await withError(400, logic.updateProfile(store, 'u1', { level: '大神' }));
+  await withError(400, logic.updateProfile(store, 'u1', { gender: '其它' }));
+});
+
+test('roster entries include level and gender', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4 }, 'org');
+  await logic.updateProfile(store, 'u1', { level: '高级', gender: '女' });
+  await logic.register(store, act.id, 'u1');
+  const d = await logic.getActivity(store, act.id);
+  assert.equal(d.confirmed[0].level, '高级');
+  assert.equal(d.confirmed[0].gender, '女');
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

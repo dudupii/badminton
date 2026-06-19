@@ -11,6 +11,10 @@ const { newId } = require('./store');
 // the `scene` value embedded in the mini-program QR code (max 32 chars).
 const CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
+// User-selectable level / gender tags (kept in sync with the profile pickers).
+const LEVELS = ['新手', '初级', '中级', '高级'];
+const GENDERS = ['男', '女', '不公开'];
+
 function genCode(state, len = 6) {
   const existing = new Set(Object.values(state.activities).map((a) => a.code));
   for (let attempt = 0; attempt < 16; attempt++) {
@@ -59,18 +63,35 @@ function ensureUser(state, openid) {
       openid,
       nickname: '球友' + openid.slice(-4),
       avatarUrl: '',
+      level: '',
+      gender: '',
+      subs: {},
       createdAt: Date.now(),
     };
   }
   return state.users[openid];
 }
 
-async function updateProfile(store, openid, { nickname, avatarUrl }) {
+async function updateProfile(store, openid, { nickname, avatarUrl, level, gender }) {
+  if (level !== undefined && level !== '' && !LEVELS.includes(level)) {
+    throw httpError(400, '水平取值非法');
+  }
+  if (gender !== undefined && gender !== '' && !GENDERS.includes(gender)) {
+    throw httpError(400, '性别取值非法');
+  }
   return store.txn((state) => {
     const u = ensureUser(state, openid);
     if (typeof nickname === 'string' && nickname.trim()) u.nickname = nickname.trim().slice(0, 32);
     if (typeof avatarUrl === 'string') u.avatarUrl = avatarUrl;
-    return { openid: u.openid, nickname: u.nickname, avatarUrl: u.avatarUrl };
+    if (level !== undefined) u.level = level;
+    if (gender !== undefined) u.gender = gender;
+    return {
+      openid: u.openid,
+      nickname: u.nickname,
+      avatarUrl: u.avatarUrl,
+      level: u.level || '',
+      gender: u.gender || '',
+    };
   });
 }
 
@@ -140,6 +161,8 @@ function enrichActivity(state, a, viewerOpenid) {
       openid: r.openid,
       nickname: u.nickname,
       avatarUrl: u.avatarUrl,
+      level: u.level || '',
+      gender: u.gender || '',
       createdAt: r.createdAt,
     };
     (confirmed.length < a.capacity ? confirmed : waitlist).push(entry);
