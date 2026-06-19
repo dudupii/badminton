@@ -18,6 +18,22 @@
     </view>
   </view>
 
+  <!-- level / gender tags -->
+  <view class="card">
+    <view class="field-row">
+      <view class="field-label">水平</view>
+      <picker bindchange="onLevelChange" value="{{levels.indexOf(user.level)}}" range="{{levels}}">
+        <view class="picker-val">{{user.level || '请选择'}}</view>
+      </picker>
+    </view>
+    <view class="field-row">
+      <view class="field-label">性别</view>
+      <picker bindchange="onGenderChange" value="{{genders.indexOf(user.gender)}}" range="{{genders}}">
+        <view class="picker-val">{{user.gender || '请选择'}}</view>
+      </picker>
+    </view>
+  </view>
+
   <!-- my registrations -->
   <view class="section-title" style="margin:8rpx 8rpx 16rpx;">我的报名</view>
 

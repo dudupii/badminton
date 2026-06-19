@@ -4,7 +4,9 @@ const fmt = require('../../utils/format');
 
 Page({
   data: {
-    user: { nickname: '', avatarUrl: '' },
+    user: { nickname: '', avatarUrl: '', level: '', gender: '' },
+    levels: ['新手', '初级', '中级', '高级'],
+    genders: ['男', '女', '不公开'],
     regs: [],
     loading: true,
   },
@@ -53,11 +55,23 @@ Page({
     this.saveProfile();
   },
 
+  onLevelChange(e) {
+    this.setData({ 'user.level': this.data.levels[e.detail.value] });
+    this.saveProfile();
+  },
+  onGenderChange(e) {
+    this.setData({ 'user.gender': this.data.genders[e.detail.value] });
+    this.saveProfile();
+  },
+
   async saveProfile() {
     try {
+      const u = this.data.user;
       await request('PATCH', '/api/user/me', {
-        nickname: this.data.user.nickname,
-        avatarUrl: this.data.user.avatarUrl,
+        nickname: u.nickname,
+        avatarUrl: u.avatarUrl,
+        level: u.level,
+        gender: u.gender,
       });
     } catch (e) {
       /* ignore profile save errors silently */

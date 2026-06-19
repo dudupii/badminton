@@ -36,3 +36,19 @@
   font-size: 30rpx;
   font-weight: 600;
 }
+
+.field-row {
+  display: flex;
+  align-items: center;
+  margin-top: 20rpx;
+}
+.field-row:first-child {
+  margin-top: 0;
+}
+.field-row .field-label {
+  width: 120rpx;
+  color: #6b7280;
+}
+.picker-val {
+  color: #374151;
+}
