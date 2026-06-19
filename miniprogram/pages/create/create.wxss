@@ -6,3 +6,6 @@
 .dt-picker-gap {
   margin-top: 16rpx;
 }
+.copy-btn {
+  margin-bottom: 20rpx;
+}

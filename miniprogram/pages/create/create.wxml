@@ -1,4 +1,5 @@
 <view class="container">
+  <button class="btn btn-ghost copy-btn" bindtap="copyLast">复制上一场</button>
   <view class="card">
     <view class="field">
       <view class="field-label">活动标题 *</view>

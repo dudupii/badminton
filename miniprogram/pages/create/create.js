@@ -8,6 +8,10 @@ function dateStr(d) {
   return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 }
 
+function timeStr(d) {
+  return pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
 Page({
   data: {
     title: '',
@@ -31,6 +35,31 @@ Page({
       startDate: dateStr(tomorrow),
       endDate: dateStr(tomorrow),
     });
+  },
+
+  async copyLast() {
+    try {
+      const list = await request('GET', '/api/activities/created-by/me');
+      if (!list.length) {
+        return wx.showToast({ title: '还没有历史活动可复制', icon: 'none' });
+      }
+      const last = list[0]; // newest
+      const lastStart = new Date(last.startTime);
+      // shift +7 days, keep same weekday & time
+      const next = new Date(lastStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+      this.setData({
+        title: last.title || '',
+        location: last.location || '',
+        description: last.description || '',
+        capacity: last.capacity || 8,
+        startDate: dateStr(next),
+        startTime: timeStr(lastStart),
+        endDate: dateStr(next),
+      });
+      wx.showToast({ title: '已复制，请核对时间', icon: 'none' });
+    } catch (e) {
+      wx.showToast({ title: e.message, icon: 'none' });
+    }
   },
 
   onInput(e) {
