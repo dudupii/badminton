@@ -95,6 +95,37 @@ async function updateProfile(store, openid, { nickname, avatarUrl, level, gender
   });
 }
 
+// Thin store-backed wrapper over ensureUser — lets tests / callers guarantee a
+// user record exists without touching raw state.
+async function ensureUserExists(store, openid) {
+  return store.txn((state) => {
+    const u = ensureUser(state, openid);
+    return { openid: u.openid };
+  });
+}
+
+// One-time subscribe = one sendable credit per (openid, templateId).
+async function addSubscription(store, openid, templateId) {
+  if (!templateId) throw httpError(400, '缺少 templateId');
+  return store.txn((state) => {
+    const u = ensureUser(state, openid);
+    u.subs = u.subs || {};
+    u.subs[templateId] = (u.subs[templateId] || 0) + 1;
+    return { templateId, credits: u.subs[templateId] };
+  });
+}
+
+// Returns true if a credit was consumed; false if none left.
+async function consumeSubscription(store, openid, templateId) {
+  return store.txn((state) => {
+    const u = state.users[openid];
+    if (!u || !u.subs || !u.subs[templateId]) return false;
+    u.subs[templateId] -= 1;
+    if (u.subs[templateId] <= 0) delete u.subs[templateId];
+    return true;
+  });
+}
+
 // ---- activities ------------------------------------------------------------
 
 async function createActivity(store, input, creatorOpenid, now = Date.now()) {
@@ -289,6 +320,9 @@ module.exports = {
   httpError,
   toMs,
   ensureUser,
+  ensureUserExists,
+  addSubscription,
+  consumeSubscription,
   updateProfile,
   createActivity,
   listActivities,

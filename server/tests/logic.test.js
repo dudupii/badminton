@@ -228,6 +228,16 @@ test('roster entries include level and gender', async () => {
   assert.equal(d.confirmed[0].gender, '女');
 });
 
+test('subscription credits: add then consume', async () => {
+  const store = tmpStore();
+  await logic.ensureUserExists(store, 'u1'); // ensure user exists
+  await logic.addSubscription(store, 'u1', 'TPL_A');
+  await logic.addSubscription(store, 'u1', 'TPL_A');
+  assert.equal(await logic.consumeSubscription(store, 'u1', 'TPL_A'), true);
+  assert.equal(await logic.consumeSubscription(store, 'u1', 'TPL_A'), true);
+  assert.equal(await logic.consumeSubscription(store, 'u1', 'TPL_A'), false); // no credit left
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

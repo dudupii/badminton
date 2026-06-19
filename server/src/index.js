@@ -190,6 +190,16 @@ app.get(
   wrap(async (req) => logic.myRegistrations(store, req.user.openid))
 );
 
+// --- subscriptions (one-time subscribe-message credits) --------------------
+app.post(
+  '/api/subscriptions',
+  requireAuth,
+  wrap(async (req) => {
+    const templateId = req.body && req.body.templateId;
+    return logic.addSubscription(store, req.user.openid, templateId);
+  })
+);
+
 if (require.main === module) {
   app.listen(config.port, config.host, () => {
     console.log(`🏸 badminton-server listening on ${config.host}:${config.port}`);
