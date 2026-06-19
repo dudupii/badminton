@@ -332,6 +332,16 @@ test('sendReminders consumes credits of registered users, returns targets, fires
   assert.deepEqual(t2, []); // already reminded → no-op
 });
 
+test('setAvatar persists avatarUrl on the user record', async () => {
+  const store = tmpStore();
+  const u = await logic.setAvatar(store, 'u1', '/avatars/u1.png');
+  assert.equal(u.avatarUrl, '/avatars/u1.png');
+  assert.equal(store.snapshot().users.u1.avatarUrl, '/avatars/u1.png');
+  // survives an unrelated updateProfile (which must not clear it)
+  const after = await logic.updateProfile(store, 'u1', { nickname: '新名' });
+  assert.equal(after.avatarUrl, '/avatars/u1.png');
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

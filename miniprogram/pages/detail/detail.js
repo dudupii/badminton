@@ -48,6 +48,13 @@ Page({
       d.timeText = fmt.dateTime(d.startTime);
       d.endText = d.endTime ? fmt.dateTime(d.endTime) : '';
 
+      // avatars are stored server-relative; resolve for <image> display
+      const resolveAvatar = (x) => {
+        if (x && x.avatarUrl && x.avatarUrl.startsWith('/')) x.avatarUrl = BASE_URL + x.avatarUrl;
+      };
+      (d.confirmed || []).forEach(resolveAvatar);
+      (d.waitlist || []).forEach(resolveAvatar);
+
       const now = Date.now();
       const isPast = !!(d.startTime && d.startTime < now);
       const myStatus = d.myStatus;

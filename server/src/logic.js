@@ -104,6 +104,16 @@ async function ensureUserExists(store, openid) {
   });
 }
 
+// Persist a server-relative avatar path on the user (uploaded + served by the
+// route layer). Returns the stored avatarUrl.
+async function setAvatar(store, openid, avatarUrl) {
+  return store.txn((state) => {
+    const u = ensureUser(state, openid);
+    u.avatarUrl = avatarUrl;
+    return { openid: u.openid, avatarUrl: u.avatarUrl };
+  });
+}
+
 // One-time subscribe = one sendable credit per (openid, templateId).
 async function addSubscription(store, openid, templateId) {
   if (!templateId) throw httpError(400, '缺少 templateId');
@@ -433,6 +443,7 @@ module.exports = {
   toMs,
   ensureUser,
   ensureUserExists,
+  setAvatar,
   addSubscription,
   consumeSubscription,
   updateProfile,

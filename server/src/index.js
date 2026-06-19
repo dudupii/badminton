@@ -2,6 +2,8 @@
 
 const express = require('express');
 const QRCode = require('qrcode');
+const path = require('path');
+const fs = require('fs');
 const config = require('./config');
 const { Store } = require('./store');
 const { sign, verify, codeToOpenid, requireAuth, optionalAuth } = require('./auth');
@@ -11,7 +13,11 @@ const logic = require('./logic');
 const store = new Store(config.dataFile);
 const app = express();
 
-app.use(express.json({ limit: '256kb' }));
+// Uploaded avatars land here (local-file storage backend; swap to COS/S3 for
+// production scale). Created on first upload.
+const AVATAR_DIR = path.join(__dirname, '..', 'data', 'avatars');
+
+app.use(express.json({ limit: '2mb' })); // room for base64 avatar uploads
 
 // --- CORS (mini-program requests aren't browser-CORS-bound, but the DevTools
 // HTTP panel / web testing benefit) ---
@@ -89,6 +95,29 @@ app.patch(
   '/api/user/me',
   requireAuth,
   wrap(async (req) => logic.updateProfile(store, req.user.openid, req.body || {}))
+);
+
+// --- avatars (local-file storage backend) ----------------------------------
+// Serve uploaded avatars publicly (the <image> tag can't send auth headers).
+app.use('/avatars', express.static(AVATAR_DIR));
+
+// Accept a base64-encoded avatar, store it, and persist its server-relative
+// URL on the user. Client prefixes BASE_URL when rendering.
+app.post(
+  '/api/user/me/avatar',
+  requireAuth,
+  wrap(async (req) => {
+    const { avatar, ext } = req.body || {};
+    if (typeof avatar !== 'string' || !avatar) throw logic.httpError(400, '缺少头像数据');
+    const safeExt = ext === 'jpeg' || ext === 'jpg' ? 'jpg' : 'png';
+    const data = avatar.startsWith('data:') ? avatar.slice(avatar.indexOf(',') + 1) : avatar;
+    const buf = Buffer.from(data, 'base64');
+    if (buf.length > 2 * 1024 * 1024) throw logic.httpError(400, '头像过大（>2MB）');
+    fs.mkdirSync(AVATAR_DIR, { recursive: true });
+    const file = `${req.user.openid}.${safeExt}`;
+    fs.writeFileSync(path.join(AVATAR_DIR, file), buf);
+    return logic.setAvatar(store, req.user.openid, '/avatars/' + file);
+  })
 );
 
 // --- activities -------------------------------------------------------------
