@@ -185,8 +185,8 @@ app.get(
 );
 
 if (require.main === module) {
-  app.listen(config.port, () => {
-    console.log(`🏸 badminton-server listening on http://localhost:${config.port}`);
+  app.listen(config.port, config.host, () => {
+    console.log(`🏸 badminton-server listening on ${config.host}:${config.port}`);
     console.log(`   devMode=${config.wx.devMode}  db=${config.dataFile}`);
   });
 }

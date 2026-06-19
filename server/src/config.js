@@ -29,6 +29,9 @@ const bool = (v) => v === '1' || v === 'true' || v === 'TRUE';
 
 const config = {
   port: Number(process.env.PORT || 3000),
+  // Behind Nginx in prod, bind to loopback only so only the proxy can reach it.
+  // Dev (no Nginx) needs 0.0.0.0 to be reachable from the simulator/phone on LAN.
+  host: process.env.HOST || '0.0.0.0',
   corsOrigin: process.env.CORS_ORIGIN || '*',
   dataFile: path.join(__dirname, '..', process.env.DATA_FILE || './data/db.json'),
 
