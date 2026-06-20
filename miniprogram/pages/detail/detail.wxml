@@ -51,6 +51,40 @@
     </view>
   </view>
 
+  <!-- 费用 AA（仅发起人） -->
+  <view class="card" wx:if="{{isCreator}}">
+    <view class="section-title">费用 AA</view>
+    <view class="row" style="margin-top:12rpx;align-items:center;">
+      <text class="muted" style="width:140rpx;">计费</text>
+      <picker bindchange="onFeeModeChange" value="{{feeEdit.mode==='fixed'?1:0}}" range="{{['总额均摊','固定人均']}}">
+        <view class="input" style="flex:1;">{{feeEdit.mode==='fixed'?'固定人均':'总额均摊'}}</view>
+      </picker>
+    </view>
+    <view class="row" style="margin-top:12rpx;align-items:center;">
+      <text class="muted" style="width:140rpx;">{{feeEdit.mode==='fixed'?'人均(元)':'总额(元)'}}</text>
+      <input class="input" style="flex:1;" type="digit" value="{{feeEdit.amount}}" placeholder="留空清除" bindinput="onFeeAmount" />
+    </view>
+    <view class="row" style="margin-top:12rpx;align-items:center;">
+      <text class="muted" style="width:140rpx;">分摊</text>
+      <picker bindchange="onFeeSplitChange" value="{{feeEdit.splitBy==='attended'?1:0}}" range="{{['按正式名单','按实到名单']}}">
+        <view class="input" style="flex:1;">{{feeEdit.splitBy==='attended'?'按实到名单':'按正式名单'}}</view>
+      </picker>
+    </view>
+    <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="saveFee">保存费用</button>
+    <view wx:if="{{feeSummary}}" class="muted" style="margin-top:16rpx;">
+      应收 ¥{{feeSummary.totalOwedCents/100}} · 已收 ¥{{feeSummary.totalPaidCents/100}} · {{feeSummary.settled?'已结清':'未结清'}}
+    </view>
+    <block wx:if="{{detail.confirmed.length}}">
+      <view class="roster-item" wx:for="{{detail.confirmed}}" wx:key="openid">
+        <text class="roster-name">{{item.nickname}}</text>
+        <text class="muted">应付¥{{item.owedCents/100}}</text>
+        <text class="tag {{item.paid?'tag-open':'tag-wait'}}" data-openid="{{item.openid}}" data-paid="{{item.paid}}" bindtap="togglePaid" style="margin-left:12rpx;">{{item.paid?'已付':'未付'}}</text>
+        <text class="tag {{item.attended===true?'tag-open':item.attended===false?'tag-closed':'tag-wait'}}" data-openid="{{item.openid}}" data-attended="{{item.attended}}" bindtap="toggleAttend" style="margin-left:8rpx;">{{item.attended===true?'到':item.attended===false?'缺':'未签'}}</text>
+      </view>
+    </block>
+    <button class="btn btn-ghost" style="margin-top:16rpx;" bindtap="exportFee">导出费用表(CSV)</button>
+  </view>
+
   <!-- invite QR -->
   <view class="card qr-card">
     <view class="section-title">邀请报名</view>
@@ -69,6 +103,8 @@
     </view>
     <button class="btn btn-ghost" style="margin-top:18rpx;" bindtap="generatePoster">生成活动海报</button>
   </view>
+
+  <view class="muted" wx:if="{{myFee}}" style="margin:8rpx 16rpx;font-size:26rpx;">我的费用：应付 ¥{{myFee.owedCents/100}} · {{myFee.paid?'已付':'待付'}}</view>
 
   <!-- my status + actions -->
   <view class="action-bar">

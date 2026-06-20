@@ -16,6 +16,10 @@ Page({
     isPast: false,
     myWaitPos: 0,
     genderCount: { male: 0, female: 0 },
+    fee: null,
+    feeSummary: null,
+    feeEdit: { mode: 'total', amount: '', splitBy: 'confirmed' },
+    myFee: null,
   },
 
   onLoad(q) {
@@ -77,6 +81,9 @@ Page({
           male: d.confirmed.filter((x) => x.gender === '男').length,
           female: d.confirmed.filter((x) => x.gender === '女').length,
         },
+        fee: d.fee,
+        feeSummary: d.feeSummary,
+        myFee: (d.confirmed || []).find((x) => x.openid === me) || null,
       });
     } catch (e) {
       this.setData({ loading: false });
@@ -161,6 +168,74 @@ Page({
 
   goEdit() {
     wx.navigateTo({ url: '/pages/create/create?id=' + this.data.id });
+  },
+
+  onFeeModeChange(e) {
+    this.setData({ 'feeEdit.mode': e.detail.value === 1 ? 'fixed' : 'total' });
+  },
+  onFeeSplitChange(e) {
+    this.setData({ 'feeEdit.splitBy': e.detail.value === 1 ? 'attended' : 'confirmed' });
+  },
+  onFeeAmount(e) {
+    this.setData({ 'feeEdit.amount': e.detail.value });
+  },
+  async saveFee() {
+    const d = this.data;
+    const yuan = parseFloat(d.feeEdit.amount);
+    const cents = isNaN(yuan) ? 0 : Math.round(yuan * 100);
+    let body;
+    if (!cents) {
+      body = {}; // empty body clears the fee
+    } else if (d.feeEdit.mode === 'total') {
+      body = { totalCents: cents, splitBy: d.feeEdit.splitBy };
+    } else {
+      body = { perPersonCents: cents, splitBy: d.feeEdit.splitBy };
+    }
+    try {
+      await request('PUT', '/api/activities/' + d.id + '/fee', body);
+      this.load();
+    } catch (e) {
+      wx.showToast({ title: e.message, icon: 'none' });
+    }
+  },
+  async togglePaid(e) {
+    const { openid, paid } = e.currentTarget.dataset;
+    try {
+      await request('POST', '/api/activities/' + this.data.id + '/roster/' + openid + '/paid', { paid: !paid });
+      this.load();
+    } catch (e) {
+      wx.showToast({ title: e.message, icon: 'none' });
+    }
+  },
+  async toggleAttend(e) {
+    const { openid, attended } = e.currentTarget.dataset;
+    const next = attended === true ? null : true; // 未到/未签 → 到；到 → 清除
+    try {
+      await request('POST', '/api/activities/' + this.data.id + '/roster/' + openid + '/attend', { attended: next });
+      this.load();
+    } catch (e) {
+      wx.showToast({ title: e.message, icon: 'none' });
+    }
+  },
+  exportFee() {
+    // Copy a CSV ledger to clipboard (the simulator/WeChat can't download a
+    // token-gated URL, so we build it client-side from data we already have).
+    const d = this.data.detail;
+    if (!d || !d.confirmed || !d.confirmed.length) {
+      return wx.showToast({ title: '暂无可导出的名单', icon: 'none' });
+    }
+    const rows = ['昵称,应付(元),已付,签到'];
+    for (const e of d.confirmed) {
+      const name = '"' + String(e.nickname || '').replace(/"/g, '""') + '"';
+      const owed = (e.owedCents / 100).toFixed(2);
+      const paid = e.paid ? '是' : '否';
+      const att = e.attended === true ? '到' : e.attended === false ? '缺' : '未签';
+      rows.push([name, owed, paid, att].join(','));
+    }
+    wx.setClipboardData({
+      data: rows.join('\n'),
+      success: () => wx.showToast({ title: '费用表已复制到剪贴板', icon: 'none' }),
+    });
   },
 
   async deleteActivity() {
