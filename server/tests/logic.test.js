@@ -600,6 +600,41 @@ test('register enforces minLevel and gender restrictions', async () => {
   await withError(400, logic.register(store, actG.id, 'g3', 3000)); // 不公开 blocked
 });
 
+test('late cancel (past cancelDeadline) marks attended=false and feeds the no-show ban', async () => {
+  const store = tmpStore();
+  const DAY = 86400000;
+  const T0 = 2_000_000_000; // activity start
+  const act = await logic.createActivity(
+    store,
+    { title: 'a', startTime: T0, capacity: 4, rules: { noShowBanDays: 7, cancelDeadlineHours: 2 } },
+    'org', 100
+  );
+  await logic.register(store, act.id, 'u1', T0 - DAY); // registered before start
+  // cancel AFTER deadline (T0-1h > T0-2h) → attended=false
+  await logic.cancel(store, act.id, 'u1', T0 - 3600000);
+  assert.equal(store.snapshot().registrations.find((r) => r.openid === 'u1').attended, false);
+
+  // a NEW org activity with noShowBanDays=7; u1 registers after T0 → BANNED
+  const next = await logic.createActivity(store, { title: 'next', startTime: T0 + 365 * DAY, capacity: 4, rules: { noShowBanDays: 7 } }, 'org', 200);
+  await withError(400, logic.register(store, next.id, 'u1', T0 + DAY));
+
+  // cancelling BEFORE the deadline does NOT mark attended
+  const act2 = await logic.createActivity(
+    store,
+    { title: 'a2', startTime: T0 + 10 * DAY, capacity: 4, rules: { noShowBanDays: 7, cancelDeadlineHours: 2 } },
+    'org', 300
+  );
+  await logic.register(store, act2.id, 'u2', T0 + 9 * DAY);
+  await logic.cancel(store, act2.id, 'u2', T0 + 10 * DAY - 5 * 3600000); // 5h before start > 2h deadline ⇒ before deadline
+  assert.equal(store.snapshot().registrations.find((r) => r.openid === 'u2').attended, undefined);
+
+  // no cancelDeadlineHours ⇒ cancel never marks attended
+  const act3 = await logic.createActivity(store, { title: 'a3', startTime: T0 + 20 * DAY, capacity: 4, rules: { noShowBanDays: 7 } }, 'org', 400);
+  await logic.register(store, act3.id, 'u3', T0 + 19 * DAY);
+  await logic.cancel(store, act3.id, 'u3', T0 + 20 * DAY - 3600000); // late, but no deadline configured
+  assert.equal(store.snapshot().registrations.find((r) => r.openid === 'u3').attended, undefined);
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

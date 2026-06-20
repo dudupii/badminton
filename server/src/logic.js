@@ -580,6 +580,16 @@ async function cancel(store, activityId, openid, now = Date.now()) {
     mine.status = 'cancelled';
     mine.cancelledAt = now;
 
+    // Late cancel = no-show: if a cancel deadline is set and we're past it.
+    // (Feeds the same-organizer no-show ban; roster/promotion are unaffected.)
+    if (
+      wasConfirmed &&
+      a.rules && a.rules.cancelDeadlineHours && a.startTime &&
+      now > a.startTime - a.rules.cancelDeadlineHours * 3600000
+    ) {
+      mine.attended = false;
+    }
+
     let promoted = null;
     if (wasConfirmed) {
       // Promote the earliest waitlister (FIFO by registration time).
