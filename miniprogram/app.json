@@ -3,7 +3,8 @@
     "pages/index/index",
     "pages/detail/detail",
     "pages/create/create",
-    "pages/profile/profile"
+    "pages/profile/profile",
+    "pages/stats/stats"
   ],
   "window": {
     "navigationBarTitleText": "羽毛球报名",

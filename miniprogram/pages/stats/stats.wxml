@@ -1,0 +1,12 @@
+<view class="container">
+  <view class="section-title" style="margin:8rpx 8rpx 16rpx;">出勤统计（我发起的活动）</view>
+  <view wx:if="{{stats.length}}" class="card">
+    <view class="roster-item" wx:for="{{stats}}" wx:key="openid" style="font-size:26rpx;">
+      <text class="roster-name">{{item.nickname}}</text>
+      <text class="muted">到{{item.attended}}/报{{item.confirmed}}</text>
+      <text class="tag {{item.noShow >= 2 ? 'tag-closed' : 'tag-open'}}" style="margin-left:8rpx;">鸽{{item.noShow}}</text>
+      <text class="muted" style="margin-left:8rpx;">{{item.rate >= 0.8 ? '靠谱' : '待观察'}}</text>
+    </view>
+  </view>
+  <view wx:elif="{{!loading}}" class="empty">还没有人报名过你发起的活动</view>
+</view>

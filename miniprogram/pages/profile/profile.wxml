@@ -34,6 +34,14 @@
     </view>
   </view>
 
+  <!-- 出勤统计入口 -->
+  <view class="card" bindtap="goStats" style="margin-bottom:16rpx;">
+    <view class="row between">
+      <text class="title-md">出勤统计</text>
+      <text class="muted">我发起的活动 ›</text>
+    </view>
+  </view>
+
   <!-- my registrations -->
   <view class="section-title" style="margin:8rpx 8rpx 16rpx;">我的报名</view>
 

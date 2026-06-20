@@ -98,4 +98,8 @@ Page({
       wx.navigateTo({ url: '/pages/detail/detail?id=' + e.currentTarget.dataset.id });
     }, 100);
   },
+
+  goStats() {
+    wx.navigateTo({ url: '/pages/stats/stats' });
+  },
 });
