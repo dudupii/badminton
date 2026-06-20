@@ -499,6 +499,28 @@ test('markPaid/markAttend reject waitlisted (non-confirmed) registrants', async 
   assert.equal((await logic.markPaid(store, act.id, 'org', 'u1', true)).paid, true);
 });
 
+test('createActivity/updateActivity accept optional rules; validateRules', async () => {
+  const store = tmpStore();
+  const a = await logic.createActivity(
+    store,
+    { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4, rules: { noShowBanDays: 7, allowedLevels: ['新手', '初级'] } },
+    'org'
+  );
+  assert.equal(a.rules.noShowBanDays, 7);
+  assert.deepEqual(a.rules.allowedLevels, ['新手', '初级']);
+  const b = await logic.createActivity(store, { title: 'T2', startTime: '2099-01-01T10:00:00', capacity: 4 }, 'org');
+  assert.equal(b.rules, null);
+  await withError(400, logic.createActivity(store, { title: 'X', startTime: '2099-01-01T10:00:00', capacity: 4, rules: { noShowBanDays: 0 } }, 'org'));
+  await withError(400, logic.createActivity(store, { title: 'X', startTime: '2099-01-01T10:00:00', capacity: 4, rules: { allowedLevels: ['大神'] } }, 'org'));
+  const c = await logic.createActivity(store, { title: 'Y', startTime: '2099-01-01T10:00:00', capacity: 4, rules: { allowedLevels: [] } }, 'org');
+  assert.equal(c.rules, null);
+  const u = await logic.updateActivity(store, a.id, 'org', { rules: { noShowBanDays: 3 } });
+  assert.equal(u.rules.noShowBanDays, 3);
+  assert.equal(u.rules.allowedLevels, undefined);
+  const u2 = await logic.updateActivity(store, a.id, 'org', { rules: null });
+  assert.equal(u2.rules, null);
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

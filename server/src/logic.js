@@ -15,6 +15,26 @@ const CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 const LEVELS = ['新手', '初级', '中级', '高级'];
 const GENDERS = ['男', '女', '不公开'];
 
+// Normalize + validate an optional activity-rules input. Returns
+// { noShowBanDays?, allowedLevels? } or null when no rule is active.
+function validateRules(input) {
+  if (input == null) return null;
+  const out = {};
+  if (input.noShowBanDays != null && input.noShowBanDays !== '') {
+    const n = Number(input.noShowBanDays);
+    if (!Number.isInteger(n) || n < 1) throw httpError(400, '缺席禁报天数需为正整数');
+    out.noShowBanDays = n;
+  }
+  if (Array.isArray(input.allowedLevels) && input.allowedLevels.length) {
+    if (!input.allowedLevels.every((l) => LEVELS.includes(l))) {
+      throw httpError(400, '级别限制含非法水平');
+    }
+    out.allowedLevels = input.allowedLevels;
+  }
+  if (!out.noShowBanDays && !out.allowedLevels) return null;
+  return out;
+}
+
 // Per-person amount owed given a fee config and the splitting-pool size.
 function perPersonOwedCents(fee, poolSize) {
   if (!fee || !poolSize) return 0;
@@ -92,6 +112,7 @@ function publicActivity(a) {
     createdAt: a.createdAt,
     status: a.status, // 'open' | 'closed'
     fee: a.fee || null,
+    rules: a.rules || null,
   };
 }
 
@@ -186,6 +207,7 @@ async function createActivity(store, input, creatorOpenid, now = Date.now()) {
   const startTime = toMs(input.startTime);
   if (!startTime) throw httpError(400, '请填写有效的开始时间');
   const endTime = toMs(input.endTime) || null;
+  const rules = validateRules(input.rules);
 
   return store.txn((state) => {
     const activity = {
@@ -200,6 +222,7 @@ async function createActivity(store, input, creatorOpenid, now = Date.now()) {
       createdBy: creatorOpenid,
       createdAt: now,
       status: 'open',
+      rules,
     };
     state.activities[activity.id] = activity;
     return publicActivity(activity);
@@ -369,6 +392,7 @@ async function updateActivity(store, id, actorOpenid, input) {
     if (startTime !== undefined) a.startTime = startTime;
     if (endTime !== undefined) a.endTime = endTime;
     if (capacity !== undefined) a.capacity = capacity;
+    if (input.rules !== undefined) a.rules = validateRules(input.rules);
     return publicActivity(a);
   });
 }
