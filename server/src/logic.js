@@ -363,6 +363,21 @@ async function markPaid(store, activityId, actorOpenid, targetOpenid, paid) {
   });
 }
 
+// Mark a registrant's attendance: true=到, false=放鸽子, null/undefined=未签/清除。
+async function markAttend(store, activityId, actorOpenid, targetOpenid, attended) {
+  return store.txn((state) => {
+    const a = state.activities[activityId];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    const r = state.registrations.find(
+      (x) => x.activityId === activityId && x.openid === targetOpenid && x.status !== 'cancelled'
+    );
+    if (!r) throw httpError(404, '该用户未报名');
+    r.attended = attended === undefined ? null : attended;
+    return { openid: r.openid, attended: r.attended };
+  });
+}
+
 async function deleteActivity(store, id, actorOpenid) {
   return store.txn((state) => {
     const a = state.activities[id];
@@ -510,6 +525,7 @@ module.exports = {
   updateActivity,
   setFee,
   markPaid,
+  markAttend,
   deleteActivity,
   register,
   cancel,

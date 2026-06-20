@@ -227,6 +227,15 @@ app.post(
   )
 );
 
+app.post(
+  '/api/activities/:id/roster/:openid/attend',
+  requireAuth,
+  wrap(async (req) => {
+    const v = req.body && 'attended' in req.body ? req.body.attended : undefined;
+    return logic.markAttend(store, req.params.id, req.user.openid, req.params.openid, v === null ? null : v);
+  })
+);
+
 app.delete(
   '/api/activities/:id',
   requireAuth,

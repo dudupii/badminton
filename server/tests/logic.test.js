@@ -378,6 +378,17 @@ test('markPaid toggles a confirmed registrant; organizer only', async () => {
   await withError(404, logic.markPaid(store, act.id, 'org', 'ghost', true));
 });
 
+test('markAttend sets attended (true/false/null); organizer only', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4 }, 'org');
+  await logic.register(store, act.id, 'u1', 1000);
+  assert.equal((await logic.markAttend(store, act.id, 'org', 'u1', true)).attended, true);
+  assert.equal((await logic.markAttend(store, act.id, 'org', 'u1', false)).attended, false);
+  assert.equal((await logic.markAttend(store, act.id, 'org', 'u1', null)).attended, null);
+  await withError(403, logic.markAttend(store, act.id, 'u1', 'u1', true));
+  await withError(404, logic.markAttend(store, act.id, 'org', 'ghost', true));
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.
