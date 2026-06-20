@@ -15,8 +15,9 @@ const CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 const LEVELS = ['新手', '初级', '中级', '高级'];
 const GENDERS = ['男', '女', '不公开'];
 
-// Normalize + validate an optional activity-rules input. Returns
-// { noShowBanDays?, allowedLevels? } or null when no rule is active.
+// Normalize + validate an optional activity-rules input. Returns the active
+// rule subset or null. Level restriction has two mutually exclusive modes:
+// allowedLevels (whitelist) vs minLevel (that level and above).
 function validateRules(input) {
   if (input == null) return null;
   const out = {};
@@ -25,13 +26,30 @@ function validateRules(input) {
     if (!Number.isInteger(n) || n < 1) throw httpError(400, '缺席禁报天数需为正整数');
     out.noShowBanDays = n;
   }
+  if (input.cancelDeadlineHours != null && input.cancelDeadlineHours !== '') {
+    const n = Number(input.cancelDeadlineHours);
+    if (!Number.isInteger(n) || n < 1) throw httpError(400, '取消截止小时需为正整数');
+    out.cancelDeadlineHours = n;
+  }
   if (Array.isArray(input.allowedLevels) && input.allowedLevels.length) {
-    if (!input.allowedLevels.every((l) => LEVELS.includes(l))) {
-      throw httpError(400, '级别限制含非法水平');
-    }
+    if (!input.allowedLevels.every((l) => LEVELS.includes(l))) throw httpError(400, '级别限制含非法水平');
     out.allowedLevels = input.allowedLevels;
   }
-  if (!out.noShowBanDays && !out.allowedLevels) return null;
+  if (input.minLevel != null && input.minLevel !== '') {
+    if (!LEVELS.includes(input.minLevel)) throw httpError(400, '最低水平取值非法');
+    out.minLevel = input.minLevel;
+  }
+  if (out.allowedLevels && out.minLevel) {
+    throw httpError(400, '级别限制只能选一种模式（指定水平 或 某级以上）');
+  }
+  if (Array.isArray(input.allowedGenders) && input.allowedGenders.length) {
+    if (!input.allowedGenders.every((g) => g === '男' || g === '女')) {
+      throw httpError(400, '性别限制取值非法');
+    }
+    out.allowedGenders = input.allowedGenders;
+  }
+  const has = out.noShowBanDays || out.cancelDeadlineHours || out.allowedLevels || out.minLevel || out.allowedGenders;
+  if (!has) return null;
   return out;
 }
 

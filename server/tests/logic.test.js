@@ -565,6 +565,23 @@ test('register enforces no-show ban within window, same organizer only', async (
   assert.equal((await logic.register(store, next3.id, 'u3', T0 + 1 * DAY)).status, 'confirmed');
 });
 
+test('validateRules: minLevel, cancelDeadlineHours, allowedGenders; level modes mutually exclusive', async () => {
+  const store = tmpStore();
+  const base = { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4 };
+  const a = await logic.createActivity(store, { ...base, rules: { minLevel: '中级' } }, 'org');
+  assert.equal(a.rules.minLevel, '中级');
+  const b = await logic.createActivity(store, { ...base, rules: { noShowBanDays: 7, cancelDeadlineHours: 2 } }, 'org');
+  assert.equal(b.rules.cancelDeadlineHours, 2);
+  const c = await logic.createActivity(store, { ...base, rules: { allowedGenders: ['女'] } }, 'org');
+  assert.deepEqual(c.rules.allowedGenders, ['女']);
+  await withError(400, logic.createActivity(store, { ...base, rules: { allowedLevels: ['新手'], minLevel: '中级' } }, 'org'));
+  await withError(400, logic.createActivity(store, { ...base, rules: { minLevel: '大神' } }, 'org'));
+  await withError(400, logic.createActivity(store, { ...base, rules: { allowedGenders: ['不公开'] } }, 'org'));
+  await withError(400, logic.createActivity(store, { ...base, rules: { cancelDeadlineHours: 0 } }, 'org'));
+  const d = await logic.createActivity(store, { ...base, rules: { allowedGenders: [] } }, 'org');
+  assert.equal(d.rules, null);
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.
