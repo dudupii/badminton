@@ -582,6 +582,24 @@ test('validateRules: minLevel, cancelDeadlineHours, allowedGenders; level modes 
   assert.equal(d.rules, null);
 });
 
+test('register enforces minLevel and gender restrictions', async () => {
+  const store = tmpStore();
+  const actMin = await logic.createActivity(store, { title: 'min', startTime: '2099-01-01T10:00:00', capacity: 4, rules: { minLevel: '中级' } }, 'org');
+  await logic.updateProfile(store, 'u1', { level: '初级' });
+  await withError(400, logic.register(store, actMin.id, 'u1', 1000)); // 初级 < 中级
+  await logic.updateProfile(store, 'u2', { level: '高级' });
+  assert.equal((await logic.register(store, actMin.id, 'u2', 2000)).status, 'confirmed'); // 高级 ≥ 中级
+  await withError(400, logic.register(store, actMin.id, 'u3', 3000)); // empty level
+
+  const actG = await logic.createActivity(store, { title: 'g', startTime: '2099-01-01T10:00:00', capacity: 4, rules: { allowedGenders: ['女'] } }, 'org');
+  await logic.updateProfile(store, 'g1', { gender: '男' });
+  await withError(400, logic.register(store, actG.id, 'g1', 1000)); // 男 blocked
+  await logic.updateProfile(store, 'g2', { gender: '女' });
+  assert.equal((await logic.register(store, actG.id, 'g2', 2000)).status, 'confirmed'); // 女 ok
+  await logic.updateProfile(store, 'g3', { gender: '不公开' });
+  await withError(400, logic.register(store, actG.id, 'g3', 3000)); // 不公开 blocked
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

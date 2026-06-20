@@ -509,11 +509,25 @@ async function register(store, activityId, openid, now = Date.now()) {
 
     // --- activity rules: level restriction ---------------------------------
     const rules = a.rules || {};
-    if (Array.isArray(rules.allowedLevels) && rules.allowedLevels.length) {
+    // level restriction: minLevel (that level and above) OR allowedLevels (whitelist)
+    if (rules.minLevel) {
+      const userLevel = (state.users[openid] || {}).level || '';
+      if (!userLevel) throw httpError(400, '请先在个人资料填写水平后再报名');
+      if (levelWeight(userLevel) < levelWeight(rules.minLevel)) {
+        throw httpError(400, '本活动限 ' + rules.minLevel + ' 及以上水平报名');
+      }
+    } else if (Array.isArray(rules.allowedLevels) && rules.allowedLevels.length) {
       const userLevel = (state.users[openid] || {}).level || '';
       if (!userLevel) throw httpError(400, '请先在个人资料填写水平后再报名');
       if (!rules.allowedLevels.includes(userLevel)) {
         throw httpError(400, '本活动限 ' + rules.allowedLevels.join('/') + ' 水平报名');
+      }
+    }
+    // gender restriction
+    if (Array.isArray(rules.allowedGenders) && rules.allowedGenders.length) {
+      const userGender = (state.users[openid] || {}).gender || '';
+      if (!rules.allowedGenders.includes(userGender)) {
+        throw httpError(400, '本活动限 ' + rules.allowedGenders.join('/') + ' 报名');
       }
     }
 
