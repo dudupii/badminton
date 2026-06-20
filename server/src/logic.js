@@ -23,6 +23,37 @@ function perPersonOwedCents(fee, poolSize) {
   return 0;
 }
 
+const LEVEL_WEIGHT = { 新手: 1, 初级: 2, 中级: 3, 高级: 4 };
+function levelWeight(level) {
+  return LEVEL_WEIGHT[level] || 2; // 未知水平按中级(2) 算
+}
+
+// Pure: split a confirmed roster into balanced groups (snake draft by level)
+// or doubles pairs (strong + weak). Each returned item gains a `weight`.
+function generateGroups(confirmed, { mode, count }) {
+  const withWeight = (e) => ({ ...e, weight: levelWeight(e.level) });
+  const sorted = [...confirmed].sort((a, b) => levelWeight(b.level) - levelWeight(a.level));
+  if (mode === 'pairs') {
+    const pairs = [];
+    const n = Math.floor(sorted.length / 2);
+    for (let i = 0; i < n; i++) {
+      pairs.push([withWeight(sorted[i]), withWeight(sorted[sorted.length - 1 - i])]);
+    }
+    if (sorted.length % 2 === 1) pairs.push([withWeight(sorted[n])]); // 落单
+    return pairs;
+  }
+  // groups: snake draft
+  const c = Math.max(1, Number(count) || 1);
+  const groups = Array.from({ length: c }, () => []);
+  sorted.forEach((p, i) => {
+    const round = Math.floor(i / c);
+    const idxInRound = i % c;
+    const idx = round % 2 === 0 ? idxInRound : c - 1 - idxInRound;
+    groups[idx].push(withWeight(p));
+  });
+  return groups.filter((g) => g.length);
+}
+
 function genCode(state, len = 6) {
   const existing = new Set(Object.values(state.activities).map((a) => a.code));
   for (let attempt = 0; attempt < 16; attempt++) {
@@ -565,4 +596,5 @@ module.exports = {
   sendReminders,
   myRegistrations,
   myCreatedActivities,
+  generateGroups,
 };

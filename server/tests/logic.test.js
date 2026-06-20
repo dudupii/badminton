@@ -421,6 +421,43 @@ test('enrichActivity computes per-person owedCents + feeSummary', async () => {
   assert.equal(d.confirmed[0].owedCents, 2500);
 });
 
+test('generateGroups: snake-draft balances level across N groups', () => {
+  const confirmed = [
+    { openid: 'a', nickname: 'A', level: '高级' },
+    { openid: 'b', nickname: 'B', level: '高级' },
+    { openid: 'c', nickname: 'C', level: '中级' },
+    { openid: 'd', nickname: 'D', level: '中级' },
+    { openid: 'e', nickname: 'E', level: '初级' },
+    { openid: 'f', nickname: 'F', level: '初级' },
+  ];
+  const groups = logic.generateGroups(confirmed, { mode: 'groups', count: 2 });
+  assert.equal(groups.length, 2);
+  assert.deepEqual(groups[0].map((x) => x.openid), ['a', 'd', 'e']);
+  assert.deepEqual(groups[1].map((x) => x.openid), ['b', 'c', 'f']);
+  assert.equal(groups[0].reduce((s, x) => s + x.weight, 0), 9);
+  assert.equal(groups[1].reduce((s, x) => s + x.weight, 0), 9);
+});
+
+test('generateGroups: pairs mode pairs strong with weak', () => {
+  const confirmed = [
+    { openid: 'a', level: '高级' },
+    { openid: 'b', level: '中级' },
+    { openid: 'c', level: '中级' },
+    { openid: 'd', level: '初级' },
+  ];
+  const pairs = logic.generateGroups(confirmed, { mode: 'pairs' });
+  assert.equal(pairs.length, 2);
+  assert.deepEqual(pairs[0].map((x) => x.openid), ['a', 'd']);
+  assert.deepEqual(pairs[1].map((x) => x.openid), ['b', 'c']);
+});
+
+test('generateGroups: empty level defaults to weight 2', () => {
+  const confirmed = [{ openid: 'a', level: '' }, { openid: 'b', level: '高级' }];
+  const pairs = logic.generateGroups(confirmed, { mode: 'pairs' });
+  assert.equal(pairs[0][0].weight, 4);
+  assert.equal(pairs[0][1].weight, 2);
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

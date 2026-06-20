@@ -266,6 +266,18 @@ app.delete(
   wrap(async (req) => logic.deleteActivity(store, req.params.id, req.user.openid))
 );
 
+// Generate balanced groups / doubles pairs for the confirmed roster.
+app.get(
+  '/api/activities/:id/grouping',
+  requireAuth,
+  wrap(async (req) => {
+    const d = await logic.getActivity(store, req.params.id, req.user.openid);
+    const mode = req.query.mode === 'pairs' ? 'pairs' : 'groups';
+    const count = Number(req.query.count) || 2;
+    return { mode, groups: logic.generateGroups(d.confirmed, { mode, count }) };
+  })
+);
+
 // --- registrations ----------------------------------------------------------
 app.post(
   '/api/activities/:id/register',
