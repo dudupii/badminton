@@ -130,6 +130,10 @@
 
   <view class="muted" wx:if="{{myFee}}" style="margin:8rpx 16rpx;font-size:26rpx;">我的费用：应付 ¥{{myFee.owedCents/100}} · {{myFee.paid?'已付':'待付'}}</view>
 
+  <view wx:if="{{detail.rules && detail.rules.noShowBanDays}}" class="card" style="background:#fef3c7;padding:20rpx;margin:8rpx 0;">
+    <text style="color:#b45309;font-size:25rpx;">⚠️ 缺席惩罚：{{detail.rules.cancelDeadlineHours ? '开赛前 ' + detail.rules.cancelDeadlineHours + ' 小时后取消或' : ''}}未到场，将 {{detail.rules.noShowBanDays}} 天内无法报名该组织者的活动</text>
+  </view>
+
   <!-- my status + actions -->
   <view class="action-bar">
     <block wx:if="{{detail.myStatus === 'confirmed'}}">

@@ -103,6 +103,7 @@ Page({
         fee: d.fee,
         feeSummary: d.feeSummary,
         myFee: (d.confirmed || []).find((x) => x.openid === me) || null,
+        rules: d.rules,
       });
     } catch (e) {
       this.setData({ loading: false });
