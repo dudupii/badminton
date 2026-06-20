@@ -236,7 +236,11 @@ app.post(
   })
 );
 
-// Export this activity's fee ledger as CSV (creator only).
+// Export this activity's fee ledger as CSV (creator only). NOTE: the WeChat
+// mini-program can't carry a Bearer token on a file download, so the app's
+// `exportFee` builds the same CSV client-side and copies it to the clipboard
+// (detail.js). This route is for curl/PC/power-user use; keep the two column
+// orders in sync if you change either.
 app.get('/api/activities/:id/fee/export', requireAuth, async (req, res) => {
   try {
     const d = await logic.getActivity(store, req.params.id, req.user.openid);

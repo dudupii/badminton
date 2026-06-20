@@ -71,7 +71,7 @@
       </picker>
     </view>
     <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="saveFee">保存费用</button>
-    <view wx:if="{{feeSummary}}" class="muted" style="margin-top:16rpx;">
+    <view wx:if="{{feeSummary && feeSummary.totalOwedCents > 0}}" class="muted" style="margin-top:16rpx;">
       应收 ¥{{feeSummary.totalOwedCents/100}} · 已收 ¥{{feeSummary.totalPaidCents/100}} · {{feeSummary.settled?'已结清':'未结清'}}
     </view>
     <block wx:if="{{detail.confirmed.length}}">
@@ -101,7 +101,7 @@
     <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="genGroups">生成</button>
     <block wx:if="{{grouping}}">
       <view wx:for="{{grouping.groups}}" wx:for-item="grp" wx:key="id" style="margin-top:16rpx;">
-        <view class="muted" style="font-weight:600;">{{grouping.mode==='pairs'?'搭档':'组'}} {{index+1}}</view>
+        <view class="muted" style="font-weight:600;">{{grouping.mode==='pairs' ? (grp.members.length===1 ? '落单' : '搭档') : '组'}} {{index+1}}</view>
         <view wx:for="{{grp.members}}" wx:for-item="p" wx:key="openid" style="padding:4rpx 0;">
           {{p.nickname}}（{{p.level||'未填'}}）
         </view>

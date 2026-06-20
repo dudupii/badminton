@@ -70,7 +70,23 @@ Page({
           ? d.waitlist.findIndex((x) => x.openid === me) + 1
           : 0;
 
+      // Hydrate the fee-edit form from the stored fee so reopening an activity
+      // with a fee shows it (and clearing the fee resets the input to blank).
+      const feeEdit = d.fee
+        ? {
+            mode: d.fee.perPersonCents != null ? 'fixed' : 'total',
+            amount:
+              d.fee.perPersonCents != null
+                ? String(d.fee.perPersonCents / 100)
+                : d.fee.totalCents != null
+                ? String(d.fee.totalCents / 100)
+                : '',
+            splitBy: d.fee.splitBy || 'confirmed',
+          }
+        : { mode: 'total', amount: '', splitBy: 'confirmed' };
+
       this.setData({
+        feeEdit,
         id: d.id,
         detail: d,
         qrcodeUrl: BASE_URL + '/api/activities/' + d.id + '/qrcode',

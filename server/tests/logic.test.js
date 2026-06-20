@@ -488,6 +488,17 @@ test('attendanceStats aggregates confirmed/attended/noShow across organizer acti
   assert.equal(stats[0].openid, 'u1');
 });
 
+test('markPaid/markAttend reject waitlisted (non-confirmed) registrants', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org');
+  await logic.register(store, act.id, 'u1', 1000); // confirmed
+  await logic.register(store, act.id, 'u2', 2000); // waitlist
+  await withError(404, logic.markPaid(store, act.id, 'org', 'u2', true));
+  await withError(404, logic.markAttend(store, act.id, 'org', 'u2', true));
+  // confirmed still works
+  assert.equal((await logic.markPaid(store, act.id, 'org', 'u1', true)).paid, true);
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.
