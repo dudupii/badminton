@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 这是什么
 
-羽毛球活动报名**微信小程序 + Node/Express 后端**。功能：发起活动（名额/时间）、用微信身份报名、名额满转候补、有人取消按 FIFO 自动上位、每个活动生成二维码供他人扫码报名。Phase 1 加了组织者向四件套：**复制上一场**（`GET /api/activities/created-by/me`，+7 天顺延）、**候补上位订阅通知**（一次性订阅消息，事件驱动）、**水平/性别标签**（用户资料 + 名单徽章 + 男/女汇总）、**可分享运动主题海报**（canvas 2d）。Phase 2 又加了：**活动编辑**（`PUT /api/activities/:id`，仅发起人，名额不可低于已正式人数）、**周期活动**（`POST /api/activities` 带 `repeat`，一次生成≤12 场）、**报名成功 + 活动前提醒订阅**（提醒靠唯一的 `setInterval` 调度器）、**头像持久化**（`POST /api/user/me/avatar` base64 上传，本地文件 + `express.static('/avatars')`）。Phase 3（自用打深）加了：**球费 AA**（`fee` 字段存「分」，总额均摊/固定人均两种、按正式/按实到，记账+签到+导出，不接支付）、**水平分组**（`generateGroups` 蛇形/首尾配对，按需算不入库）、**出勤统计**（`attendanceStats` 跨活动聚合实到/放鸽子）。
+羽毛球活动报名**微信小程序 + Node/Express 后端**。功能：发起活动（名额/时间）、用微信身份报名、名额满转候补、有人取消按 FIFO 自动上位、每个活动生成二维码供他人扫码报名。Phase 1 加了组织者向四件套：**复制上一场**（`GET /api/activities/created-by/me`，+7 天顺延）、**候补上位订阅通知**（一次性订阅消息，事件驱动）、**水平/性别标签**（用户资料 + 名单徽章 + 男/女汇总）、**可分享运动主题海报**（canvas 2d）。Phase 2 又加了：**活动编辑**（`PUT /api/activities/:id`，仅发起人，名额不可低于已正式人数）、**周期活动**（`POST /api/activities` 带 `repeat`，一次生成≤12 场）、**报名成功 + 活动前提醒订阅**（提醒靠唯一的 `setInterval` 调度器）、**头像持久化**（`POST /api/user/me/avatar` base64 上传，本地文件 + `express.static('/avatars')`）。Phase 3（自用打深）加了：**球费 AA**（`fee` 字段存「分」，总额均摊/固定人均两种、按正式/按实到，记账+签到+导出，不接支付）、**水平分组**（`generateGroups` 蛇形/首尾配对，按需算不入库）、**出勤统计**（`attendanceStats` 跨活动聚合实到/放鸽子）。Phase 4（报名规则）加了：**缺席惩罚 + 级别限制**两条可选规则（`activity.rules = {noShowBanDays, allowedLevels}`，缺省都不启用），`register()` 报名时即时校验——缺席惩罚按"同组织者 + 窗口内 + `attended===false`"判，级别限制拦空水平。
 
 仓库两部分：
 - `server/` — Express 后端（唯一运行时依赖 `express` + `qrcode`）。
@@ -62,6 +62,12 @@ openid → HMAC-SHA256 自签 token（无 JWT 依赖）。前端 `utils/request.
 - **水平分组**：`generateGroups(confirmed,{mode,count})` 是**纯函数**（无 store），权重 新手1/初级2/中级3/高级4（空值按**初级2**）。`groups` 模式蛇形分发、`pairs` 模式首尾配对，每个返回项带 `weight`。**不入库**，`GET .../grouping` 实时算；前端把 `groups`（数组套数组）映射成 `{id,members}` 以满足 `wx:key`。
 - **出勤统计**：`attendanceStats(store,organizerOpenid)` 跨"我创建的"活动聚合 registrations（只算 `status==='confirmed'`）：`attended`(attended===true) / `noShow`(attended===false) / `rate`，按 attended 降序。**共用 Phase 3 的 `attended` 字段**（签到既驱动按实到均摊，也驱动放鸽子统计）。
 - **跨 Phase 一致**：三样都只读/扩展现有 `activity`/`registration`，无新核心实体；数据仍以"活动"为中心，将来加"群"套 `clubId` 过滤即可（留口子）。
+
+**Phase 4（报名规则）的实现要点：**
+- **数据模型**：`activity.rules = { noShowBanDays?, allowedLevels? }`（可选；缺省/空 → null）。`validateRules(input)` 纯函数校验：`noShowBanDays` 正整数、`allowedLevels` 是 `LEVELS` 非空子集（空数组算关闭）。`createActivity`/`updateActivity` 接受 `rules`（`updateActivity` 里 `if (input.rules !== undefined)` 才动；传 `null` 清空），`publicActivity` 透出。**无新端点**——随 create/edit 走。
+- **报名时即时校验**（`register()` txn 内，重复报名守卫之后、算 `confirmedCount` 之前）：① 级别限制——`allowedLevels` 非空时，用户 `level` 为空 → 400「请先填水平」；不在集合 → 400「本活动限 X/Y 水平」。② 缺席惩罚——`noShowBanDays=N` 时，扫该用户在同一 `createdBy` 名下、`attended===false`、且活动 `startTime ∈ (now-N天, now]` 的报名，命中 → 400「你于 X月X日 缺席…N 天内无法报名」。
+- **关键依赖/边界**：缺席判定**依赖 Phase 3 签到**（组织者须把人标 `attended=false`；`attended===null` 未签不算缺席）。范围 = **同一组织者**（`createdBy` 相同），跨组织者不互扰。规则只在"开启了该规则的活动"报名时检查；**不持久化惩罚态**，每次报名现场扫 registrations（自用规模可接受）。规则向前生效（据过往缺席历史拦）。
+- **前端**：create 页（+编辑模式）「报名规则」可选区，两个 `<switch>` + 天数输入（自由输入/失焦规范化，复用 repeat 那套）+ 水平多选 tag；`loadForEdit` 回填；`submit` 把 `buildRules()` 结果挂到 `payload.rules`（create/edit 都带）。
 
 ## 陷阱与非显而易见的事
 
