@@ -89,6 +89,7 @@
 
     <view class="field">
       <view class="field-label">报名规则（可选）</view>
+
       <view class="row" style="margin-top:12rpx;align-items:center;">
         <switch checked="{{ruleNoShow}}" bindchange="toggleRuleNoShow" color="#16a34a"/>
         <text style="margin-left:16rpx;">缺席惩罚</text>
@@ -97,17 +98,38 @@
         <text class="muted" style="width:160rpx;">缺席后禁报天数</text>
         <input class="input" style="flex:1;" type="number" value="{{ruleNoShowDays}}" bindinput="onRuleNoShowDays" bindblur="onRuleNoShowDaysBlur"/>
       </view>
-      <view wx:if="{{ruleNoShow}}" class="muted" style="margin-top:8rpx;font-size:24rpx;">曾缺席你活动的人，这段时间内无法报名（需先在详情页签到标"缺"）</view>
+      <view wx:if="{{ruleNoShow}}" class="row" style="margin-top:12rpx;align-items:center;">
+        <text class="muted" style="width:160rpx;">取消截止(开赛前小时)</text>
+        <input class="input" style="flex:1;" type="number" value="{{ruleCancelDeadline}}" placeholder="不限" bindinput="onRuleCancelDeadline" bindblur="onRuleCancelDeadlineBlur"/>
+      </view>
+      <view wx:if="{{ruleNoShow}}" class="muted" style="margin-top:8rpx;font-size:24rpx;">过了取消截止时间再取消（或未到场），算缺席并禁报</view>
 
       <view class="row" style="margin-top:16rpx;align-items:center;">
-        <switch checked="{{ruleLevel}}" bindchange="toggleRuleLevel" color="#16a34a"/>
-        <text style="margin-left:16rpx;">级别限制</text>
+        <text class="muted" style="width:160rpx;">级别限制</text>
+        <picker bindchange="onRuleLevelModeChange" value="{{ruleLevelMode==='whitelist'?1:ruleLevelMode==='min'?2:0}}" range="{{['不限制','指定水平','某级以上']}}">
+          <view class="input" style="flex:1;">{{ruleLevelMode==='min'?'某级以上':ruleLevelMode==='whitelist'?'指定水平':'不限制'}}</view>
+        </picker>
       </view>
-      <view wx:if="{{ruleLevel}}" class="row" style="margin-top:12rpx;flex-wrap:wrap;">
+      <view wx:if="{{ruleLevelMode==='whitelist'}}" class="row" style="margin-top:12rpx;flex-wrap:wrap;">
         <view wx:for="{{levelOptions}}" wx:key="*this" data-level="{{item}}" bindtap="toggleRuleLevelItem"
               class="tag {{ruleLevels.indexOf(item) >= 0 ? 'tag-open' : 'tag-wait'}}" style="margin:6rpx 8rpx 0 0;">{{item}}</view>
       </view>
-      <view wx:if="{{ruleLevel}}" class="muted" style="margin-top:8rpx;font-size:24rpx;">仅选中水平的球友可报名；没填水平的会被提示先去资料页填</view>
+      <view wx:if="{{ruleLevelMode==='min'}}" class="row" style="margin-top:12rpx;align-items:center;">
+        <text class="muted" style="width:160rpx;">最低水平</text>
+        <picker bindchange="onRuleMinLevelChange" value="{{levelOptions.indexOf(ruleMinLevel)}}" range="{{levelOptions}}">
+          <view class="input" style="flex:1;">{{ruleMinLevel}}</view>
+        </picker>
+      </view>
+
+      <view class="row" style="margin-top:16rpx;align-items:center;">
+        <switch checked="{{ruleGender}}" bindchange="toggleRuleGender" color="#16a34a"/>
+        <text style="margin-left:16rpx;">性别限制</text>
+      </view>
+      <view wx:if="{{ruleGender}}" class="row" style="margin-top:12rpx;flex-wrap:wrap;">
+        <view wx:for="{{['男','女']}}" wx:key="*this" data-gender="{{item}}" bindtap="toggleRuleGenderItem"
+              class="tag {{ruleGenders.indexOf(item) >= 0 ? 'tag-open' : 'tag-wait'}}" style="margin:6rpx 8rpx 0 0;">{{item}}</view>
+      </view>
+      <view wx:if="{{ruleGender}}" class="muted" style="margin-top:8rpx;font-size:24rpx;">没填或"不公开"性别的会被拦</view>
     </view>
   </view>
 

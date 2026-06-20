@@ -32,7 +32,11 @@ Page({
     levelOptions: ['新手', '初级', '中级', '高级'],
     ruleNoShow: false,
     ruleNoShowDays: 7,
-    ruleLevel: false,
+    ruleLevelMode: 'off', // 'off' | 'whitelist' | 'min'
+    ruleMinLevel: '中级',
+    ruleGender: false,
+    ruleGenders: [],
+    ruleCancelDeadline: '', // hours (string while editing)
     ruleLevels: [],
   },
 
@@ -72,8 +76,12 @@ Page({
       this.setData({
         ruleNoShow: !!a.rules.noShowBanDays,
         ruleNoShowDays: a.rules.noShowBanDays || 7,
-        ruleLevel: Array.isArray(a.rules.allowedLevels) && a.rules.allowedLevels.length > 0,
+        ruleCancelDeadline: a.rules.cancelDeadlineHours ? String(a.rules.cancelDeadlineHours) : '',
+        ruleLevelMode: a.rules.minLevel ? 'min' : (Array.isArray(a.rules.allowedLevels) && a.rules.allowedLevels.length ? 'whitelist' : 'off'),
+        ruleMinLevel: a.rules.minLevel || '中级',
         ruleLevels: (a.rules.allowedLevels || []).slice(),
+        ruleGender: Array.isArray(a.rules.allowedGenders) && a.rules.allowedGenders.length > 0,
+        ruleGenders: (a.rules.allowedGenders || []).slice(),
       });
     }
     } catch (e) {
@@ -166,9 +174,6 @@ Page({
     if (isNaN(v) || v < 1) v = 1;
     this.setData({ ruleNoShowDays: v });
   },
-  toggleRuleLevel() {
-    this.setData({ ruleLevel: !this.data.ruleLevel });
-  },
   toggleRuleLevelItem(e) {
     const lv = e.currentTarget.dataset.level;
     const set = this.data.ruleLevels.slice();
@@ -180,9 +185,40 @@ Page({
   buildRules() {
     const d = this.data;
     const rules = {};
-    if (d.ruleNoShow) rules.noShowBanDays = parseInt(d.ruleNoShowDays, 10) || 7;
-    if (d.ruleLevel && d.ruleLevels.length) rules.allowedLevels = d.ruleLevels.slice();
+    if (d.ruleNoShow) {
+      rules.noShowBanDays = parseInt(d.ruleNoShowDays, 10) || 7;
+      const cd = parseInt(d.ruleCancelDeadline, 10);
+      if (cd > 0) rules.cancelDeadlineHours = cd;
+    }
+    if (d.ruleLevelMode === 'whitelist' && d.ruleLevels.length) rules.allowedLevels = d.ruleLevels.slice();
+    else if (d.ruleLevelMode === 'min') rules.minLevel = d.ruleMinLevel;
+    if (d.ruleGender && d.ruleGenders.length) rules.allowedGenders = d.ruleGenders.slice();
     return Object.keys(rules).length ? rules : undefined;
+  },
+  onRuleLevelModeChange(e) {
+    const idx = Number(e.detail.value);
+    this.setData({ ruleLevelMode: ['off', 'whitelist', 'min'][idx] || 'off' });
+  },
+  onRuleMinLevelChange(e) {
+    this.setData({ ruleMinLevel: this.data.levelOptions[e.detail.value] });
+  },
+  onRuleCancelDeadline(e) {
+    this.setData({ ruleCancelDeadline: e.detail.value });
+  },
+  onRuleCancelDeadlineBlur(e) {
+    let v = parseInt(e.detail.value, 10);
+    this.setData({ ruleCancelDeadline: isNaN(v) || v < 1 ? '' : String(v) });
+  },
+  toggleRuleGender() {
+    this.setData({ ruleGender: !this.data.ruleGender });
+  },
+  toggleRuleGenderItem(e) {
+    const g = e.currentTarget.dataset.gender;
+    const set = this.data.ruleGenders.slice();
+    const i = set.indexOf(g);
+    if (i === -1) set.push(g);
+    else set.splice(i, 1);
+    this.setData({ ruleGenders: set });
   },
 
   // Explicit per-field change handlers for the date/time pickers — avoids any
