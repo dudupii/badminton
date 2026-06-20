@@ -15,6 +15,9 @@
 - 🔁 **周期活动**：发起时可选每天/每周/自定义间隔，一次生成连续多场（≤12 场）
 - 🔔 **订阅消息**：报名成功、候补上位、**活动开始前提醒**（定时调度，可配提前时长）
 - 🧑 **头像持久化**：选头像后上传后端保存，跨会话不丢（本地文件存储，生产可换对象存储）
+- 💰 **球费 AA**：组织者设总额均摊或固定人均（按正式/按实到），逐人标记已付、签到，一键复制费用表（CSV）
+- 🎯 **水平分组**：按水平蛇形分 N 组（场地）或首尾配对（双打搭档），实力尽量均衡
+- 📊 **出勤统计**：跨活动聚合谁常来、谁放鸽子，组织者一目了然
 
 ```
 badminton/
@@ -116,6 +119,12 @@ npm test
 | POST | `/api/subscriptions` | 记录一次性订阅授权（候补上位/报名成功/提醒） | 必须 |
 | POST | `/api/user/me/avatar` | 上传头像（base64，≤2MB） | 必须 |
 | GET  | `/avatars/:file` | 头像图片 | 公开 |
+| PUT  | `/api/activities/:id/fee` | 设置/清除活动费用（总额均摊 or 固定人均） | 必须(发起人) |
+| POST | `/api/activities/:id/roster/:openid/paid` | 标记某人已付/未付 | 必须(发起人) |
+| POST | `/api/activities/:id/roster/:openid/attend` | 签到某人 到/缺/清除 | 必须(发起人) |
+| GET  | `/api/activities/:id/fee/export` | 导出费用表（CSV，含 BOM） | 必须(发起人) |
+| GET  | `/api/activities/:id/grouping` | 按水平分组（`mode=groups\|pairs`、`count`） | 必须 |
+| GET  | `/api/stats/attendance` | 出勤统计（我发起的活动，跨活动聚合） | 必须 |
 
 ### 名额与候补规则
 

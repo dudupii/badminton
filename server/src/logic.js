@@ -25,7 +25,7 @@ function perPersonOwedCents(fee, poolSize) {
 
 const LEVEL_WEIGHT = { 新手: 1, 初级: 2, 中级: 3, 高级: 4 };
 function levelWeight(level) {
-  return LEVEL_WEIGHT[level] || 2; // 未知水平按中级(2) 算
+  return LEVEL_WEIGHT[level] || 2; // 未知水平按初级(2) 算
 }
 
 // Pure: split a confirmed roster into balanced groups (snake draft by level)

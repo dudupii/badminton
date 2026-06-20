@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 这是什么
 
-羽毛球活动报名**微信小程序 + Node/Express 后端**。功能：发起活动（名额/时间）、用微信身份报名、名额满转候补、有人取消按 FIFO 自动上位、每个活动生成二维码供他人扫码报名。Phase 1 加了组织者向四件套：**复制上一场**（`GET /api/activities/created-by/me`，+7 天顺延）、**候补上位订阅通知**（一次性订阅消息，事件驱动）、**水平/性别标签**（用户资料 + 名单徽章 + 男/女汇总）、**可分享运动主题海报**（canvas 2d）。Phase 2 又加了：**活动编辑**（`PUT /api/activities/:id`，仅发起人，名额不可低于已正式人数）、**周期活动**（`POST /api/activities` 带 `repeat`，一次生成≤12 场）、**报名成功 + 活动前提醒订阅**（提醒靠唯一的 `setInterval` 调度器）、**头像持久化**（`POST /api/user/me/avatar` base64 上传，本地文件 + `express.static('/avatars')`）。
+羽毛球活动报名**微信小程序 + Node/Express 后端**。功能：发起活动（名额/时间）、用微信身份报名、名额满转候补、有人取消按 FIFO 自动上位、每个活动生成二维码供他人扫码报名。Phase 1 加了组织者向四件套：**复制上一场**（`GET /api/activities/created-by/me`，+7 天顺延）、**候补上位订阅通知**（一次性订阅消息，事件驱动）、**水平/性别标签**（用户资料 + 名单徽章 + 男/女汇总）、**可分享运动主题海报**（canvas 2d）。Phase 2 又加了：**活动编辑**（`PUT /api/activities/:id`，仅发起人，名额不可低于已正式人数）、**周期活动**（`POST /api/activities` 带 `repeat`，一次生成≤12 场）、**报名成功 + 活动前提醒订阅**（提醒靠唯一的 `setInterval` 调度器）、**头像持久化**（`POST /api/user/me/avatar` base64 上传，本地文件 + `express.static('/avatars')`）。Phase 3（自用打深）加了：**球费 AA**（`fee` 字段存「分」，总额均摊/固定人均两种、按正式/按实到，记账+签到+导出，不接支付）、**水平分组**（`generateGroups` 蛇形/首尾配对，按需算不入库）、**出勤统计**（`attendanceStats` 跨活动聚合实到/放鸽子）。
 
 仓库两部分：
 - `server/` — Express 后端（唯一运行时依赖 `express` + `qrcode`）。
@@ -56,6 +56,12 @@ openid → HMAC-SHA256 自签 token（无 JWT 依赖）。前端 `utils/request.
 - **周期活动**：`createRecurring(store, input, creator, {count, stepDays})` 循环调 `createActivity`，每次 `startTime += stepDays`（最多 12 场，各自独立邀请码）。`POST /api/activities` 检测 `body.repeat`：`count>1` 走批量返回 `{activities:[...]]}`，否则单建返回单个。前端 `create` 页有重复 picker（不重复/每天/每周/自定义）+ 场数 + 间隔，编辑模式下隐藏。
 - **报名成功 + 活动前提醒订阅**：报名成功是事件驱动（register 路由消费一次 `registered` 配额并发送，与 cancel→promote 同模式）。**活动前提醒是本应用唯一的定时器**——`index.js` 里 `reminderSweep()` 用 `setInterval`（默认 300s，`REMIND_INTERVAL_SECONDS`）扫描 `findActivitiesNeedingReminder`（`now<startTime≤now+REMIND_LEAD_HOURS` 且未 `remindedAt`），对每个命中活动调 `sendReminders`（原子消费每个报名者的 remind 配额并标记 `activity.remindedAt`，只发一次）后由路由层发消息。devMode/无模板时调度器整体跳过。三模板双端配置：后端 `WX_*_TPL`、前端 `SUBSCRIBE_TEMPLATES.*`；`doRegister` 一次性 `requestSubscribeMessage` 三个 tmplId，`registered` 配额在报名前授予（路由消费），`promote`/`remind` 报名后授予。
 - **头像持久化**：`POST /api/user/me/avatar` 收 base64（≤2MB，`express.json` limit 已提到 2mb），写 `data/avatars/<openid>.<ext>`，`express.static('/avatars')` 公开服务。`logic.setAvatar` 存**服务器相对路径** `/avatars/...`，前端 `loadMe`/detail 名单渲染时用 `BASE_URL` 前缀解析。本地文件是存储后端，生产换 COS/S3。`saveProfile` 不再带 `avatarUrl`（归上传端点管）。
+
+**Phase 3（自用打深）的实现要点：**
+- **球费 AA**：`activity.fee = {totalCents, perPersonCents, splitBy}`（金额一律存**「分」整数**；`totalCents`/`perPersonCents` 二选一非空，`splitBy` ∈ `confirmed`/`attended`）。`setFee` 用 `wantsSet` 标志区分"设置"（任一字段在即视为设置意图，缺金额则 400）与"清空"（空 `{}`）。`enrichActivity` 按 splitBy 取池子（正式名单 / `attended===true` 者），`perPersonOwedCents` 算人均，给每个 confirmed entry 带 `owedCents`/`paid`/`attended`，并返回 `feeSummary{totalOwedCents,totalPaidCents,settled}`。**不接微信支付**——组织者记账（`markPaid`）+ 签到（`markAttend`，`attended` 三态 true/false/null）+ 导出。CSV 导出（`GET .../fee/export`）是独立 handler 不走 `wrap`（直接 `res.send` 文本+UTF-8 BOM）；前端 `exportFee` 因小程序无法带 token 下载，改为**用本地数据拼 CSV 复制到剪贴板**。
+- **水平分组**：`generateGroups(confirmed,{mode,count})` 是**纯函数**（无 store），权重 新手1/初级2/中级3/高级4（空值按**初级2**）。`groups` 模式蛇形分发、`pairs` 模式首尾配对，每个返回项带 `weight`。**不入库**，`GET .../grouping` 实时算；前端把 `groups`（数组套数组）映射成 `{id,members}` 以满足 `wx:key`。
+- **出勤统计**：`attendanceStats(store,organizerOpenid)` 跨"我创建的"活动聚合 registrations（只算 `status==='confirmed'`）：`attended`(attended===true) / `noShow`(attended===false) / `rate`，按 attended 降序。**共用 Phase 3 的 `attended` 字段**（签到既驱动按实到均摊，也驱动放鸽子统计）。
+- **跨 Phase 一致**：三样都只读/扩展现有 `activity`/`registration`，无新核心实体；数据仍以"活动"为中心，将来加"群"套 `clubId` 过滤即可（留口子）。
 
 ## 陷阱与非显而易见的事
 
