@@ -236,6 +236,30 @@ app.post(
   })
 );
 
+// Export this activity's fee ledger as CSV (creator only).
+app.get('/api/activities/:id/fee/export', requireAuth, async (req, res) => {
+  try {
+    const d = await logic.getActivity(store, req.params.id, req.user.openid);
+    if (d.createdBy !== req.user.openid) {
+      return res.status(403).json({ ok: false, error: '只有发起人可以导出' });
+    }
+    const rows = [['昵称', '应付(元)', '已付', '签到'].join(',')];
+    for (const e of d.confirmed) {
+      const name = '"' + String(e.nickname || '').replace(/"/g, '""') + '"';
+      const owed = (e.owedCents / 100).toFixed(2);
+      const paid = e.paid ? '是' : '否';
+      const att = e.attended === true ? '到' : e.attended === false ? '缺' : '未签';
+      rows.push([name, owed, paid, att].join(','));
+    }
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', 'attachment; filename="fee-' + req.params.id + '.csv"');
+    res.send('﻿' + rows.join('\n')); // BOM so Excel reads UTF-8
+  } catch (e) {
+    const status = e.statusCode || 500;
+    res.status(status).json({ ok: false, error: e.message || '服务器错误' });
+  }
+});
+
 app.delete(
   '/api/activities/:id',
   requireAuth,
