@@ -489,6 +489,16 @@ async function register(store, activityId, openid, now = Date.now()) {
     const mine = regs.find((r) => r.openid === openid && r.status !== 'cancelled');
     if (mine) throw httpError(409, '您已报名该活动');
 
+    // --- activity rules: level restriction ---------------------------------
+    const rules = a.rules || {};
+    if (Array.isArray(rules.allowedLevels) && rules.allowedLevels.length) {
+      const userLevel = (state.users[openid] || {}).level || '';
+      if (!userLevel) throw httpError(400, '请先在个人资料填写水平后再报名');
+      if (!rules.allowedLevels.includes(userLevel)) {
+        throw httpError(400, '本活动限 ' + rules.allowedLevels.join('/') + ' 水平报名');
+      }
+    }
+
     const confirmedCount = regs.filter((r) => r.status === 'confirmed').length;
     const status = confirmedCount < a.capacity ? 'confirmed' : 'waitlist';
 

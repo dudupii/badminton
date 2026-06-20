@@ -521,6 +521,20 @@ test('createActivity/updateActivity accept optional rules; validateRules', async
   assert.equal(u2.rules, null);
 });
 
+test('register enforces level restriction (allowedLevels)', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(
+    store,
+    { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4, rules: { allowedLevels: ['新手', '初级'] } },
+    'org'
+  );
+  await logic.updateProfile(store, 'u1', { level: '中级' });
+  await withError(400, logic.register(store, act.id, 'u1', 1000)); // 中级 not allowed
+  await logic.updateProfile(store, 'u2', { level: '初级' });
+  assert.equal((await logic.register(store, act.id, 'u2', 2000)).status, 'confirmed'); // 初级 ok
+  await withError(400, logic.register(store, act.id, 'u3', 3000)); // empty level blocked
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.
