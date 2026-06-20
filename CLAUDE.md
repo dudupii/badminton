@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 这是什么
 
-羽毛球活动报名**微信小程序 + Node/Express 后端**。功能：发起活动（名额/时间）、用微信身份报名、名额满转候补、有人取消按 FIFO 自动上位、每个活动生成二维码供他人扫码报名。Phase 1 加了组织者向四件套：**复制上一场**（`GET /api/activities/created-by/me`，+7 天顺延）、**候补上位订阅通知**（一次性订阅消息，事件驱动）、**水平/性别标签**（用户资料 + 名单徽章 + 男/女汇总）、**可分享运动主题海报**（canvas 2d）。Phase 2 又加了：**活动编辑**（`PUT /api/activities/:id`，仅发起人，名额不可低于已正式人数）、**周期活动**（`POST /api/activities` 带 `repeat`，一次生成≤12 场）、**报名成功 + 活动前提醒订阅**（提醒靠唯一的 `setInterval` 调度器）、**头像持久化**（`POST /api/user/me/avatar` base64 上传，本地文件 + `express.static('/avatars')`）。Phase 3（自用打深）加了：**球费 AA**（`fee` 字段存「分」，总额均摊/固定人均两种、按正式/按实到，记账+签到+导出，不接支付）、**水平分组**（`generateGroups` 蛇形/首尾配对，按需算不入库）、**出勤统计**（`attendanceStats` 跨活动聚合实到/放鸽子）。Phase 4（报名规则）加了：**缺席惩罚 + 级别限制**两条可选规则（`activity.rules = {noShowBanDays, allowedLevels}`，缺省都不启用），`register()` 报名时即时校验——缺席惩罚按"同组织者 + 窗口内 + `attended===false`"判，级别限制拦空水平。
+羽毛球活动报名**微信小程序 + Node/Express 后端**。功能：发起活动（名额/时间）、用微信身份报名、名额满转候补、有人取消按 FIFO 自动上位、每个活动生成二维码供他人扫码报名。Phase 1 加了组织者向四件套：**复制上一场**（`GET /api/activities/created-by/me`，+7 天顺延）、**候补上位订阅通知**（一次性订阅消息，事件驱动）、**水平/性别标签**（用户资料 + 名单徽章 + 男/女汇总）、**可分享运动主题海报**（canvas 2d）。Phase 2 又加了：**活动编辑**（`PUT /api/activities/:id`，仅发起人，名额不可低于已正式人数）、**周期活动**（`POST /api/activities` 带 `repeat`，一次生成≤12 场）、**报名成功 + 活动前提醒订阅**（提醒靠唯一的 `setInterval` 调度器）、**头像持久化**（`POST /api/user/me/avatar` base64 上传，本地文件 + `express.static('/avatars')`）。Phase 3（自用打深）加了：**球费 AA**（`fee` 字段存「分」，总额均摊/固定人均两种、按正式/按实到，记账+签到+导出，不接支付）、**水平分组**（`generateGroups` 蛇形/首尾配对，按需算不入库）、**出勤统计**（`attendanceStats` 跨活动聚合实到/放鸽子）。Phase 4（报名规则）加了：**缺席惩罚 + 级别限制**两条可选规则（`activity.rules`，缺省都不启用），`register()` 报名时即时校验——缺席惩罚按"同组织者 + 窗口内 + `attended===false`"判，级别限制拦空水平。Phase 4.5（规则增强）扩成：级别限制**双模式**（`allowedLevels` 白名单 或 `minLevel` 某级以上，互斥）、新增性别限制 `allowedGenders`（⊆{男,女}，"不公开"拦）、缺席惩罚加**取消截止** `cancelDeadlineHours`（`cancel()` 过截止取消会标 `attended=false` 算缺席）+ 详情页警告横幅。
 
 仓库两部分：
 - `server/` — Express 后端（唯一运行时依赖 `express` + `qrcode`）。
@@ -68,6 +68,14 @@ openid → HMAC-SHA256 自签 token（无 JWT 依赖）。前端 `utils/request.
 - **报名时即时校验**（`register()` txn 内，重复报名守卫之后、算 `confirmedCount` 之前）：① 级别限制——`allowedLevels` 非空时，用户 `level` 为空 → 400「请先填水平」；不在集合 → 400「本活动限 X/Y 水平」。② 缺席惩罚——`noShowBanDays=N` 时，扫该用户在同一 `createdBy` 名下、`attended===false`、且活动 `startTime ∈ (now-N天, now]` 的报名，命中 → 400「你于 X月X日 缺席…N 天内无法报名」。
 - **关键依赖/边界**：缺席判定**依赖 Phase 3 签到**（组织者须把人标 `attended=false`；`attended===null` 未签不算缺席）。范围 = **同一组织者**（`createdBy` 相同），跨组织者不互扰。规则只在"开启了该规则的活动"报名时检查；**不持久化惩罚态**，每次报名现场扫 registrations（自用规模可接受）。规则向前生效（据过往缺席历史拦）。
 - **前端**：create 页（+编辑模式）「报名规则」可选区，两个 `<switch>` + 天数输入（自由输入/失焦规范化，复用 repeat 那套）+ 水平多选 tag；`loadForEdit` 回填；`submit` 把 `buildRules()` 结果挂到 `payload.rules`（create/edit 都带）。
+
+**Phase 4.5（规则增强）的实现要点：**
+- `rules` 新增三个可选字段：`minLevel`（某级及以上，权重比较）、`allowedGenders`（⊆{男,女}，**与 `allowedLevels` 互斥**的是 `minLevel`）、`cancelDeadlineHours`（开赛前 N 小时）。`validateRules` 增量校验 + `allowedLevels`/`minLevel` 互斥检查（同设 → 400）。空数组/空串 = 关闭。
+- `register()` 级别块改成 `if (minLevel) … else if (allowedLevels) …`（`levelWeight` 比较）；新增性别块（`allowedGenders` 非空时 gender 须在集合，**不公开/空 → 拦**）。
+- **迟到取消 = 缺席**：`cancel()` 在 `mine.cancelledAt=now` 后，若 `wasConfirmed && rules.cancelDeadlineHours && now > startTime − hours·3600000` → 设 `mine.attended=false`。该 reg 是 `cancelled` 但带 `attended=false`，被 `register()` 的禁报扫描（`r.attended===false`，不看 status）命中。**候补上位不受影响**。
+- **详情页警告横幅**：`detail.rules.noShowBanDays` 生效时显示，文案按有无 `cancelDeadlineHours` 切换；`load()` 把 `d.rules` 下发。
+- 兼容：既有活动 `rules`（仅 `noShowBanDays`/`allowedLevels`）行为不变；前端级别 UI 从布尔开关改成三态 picker（关/指定水平/某级以上），`loadForEdit` 据有无 `minLevel`/`allowedLevels` 回填模式。
+- 同 Phase 4：缺席禁报要等原活动 `startTime` 过后才在新报名命中；缺席判定仍依赖 Phase 3 签到或本阶段的迟到取消。
 
 ## 陷阱与非显而易见的事
 
