@@ -347,6 +347,12 @@ app.get(
   wrap(async (req) => logic.myRegistrations(store, req.user.openid))
 );
 
+app.get(
+  '/api/stats/attendance',
+  requireAuth,
+  wrap(async (req) => logic.attendanceStats(store, req.user.openid))
+);
+
 // --- pre-start reminder scheduler ------------------------------------------
 // Event-driven app otherwise has no timers; reminders need a periodic sweep.
 // Skips itself entirely in devMode or with no template configured.

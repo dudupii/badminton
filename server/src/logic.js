@@ -570,6 +570,32 @@ async function myCreatedActivities(store, openid) {
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 
+// Per-user attendance across the organizer's activities: confirmed / attended /
+// noShow (confirmed but marked absent) / rate. Waitlisted and cancelled excluded.
+function attendanceStats(store, organizerOpenid) {
+  const state = store.snapshot();
+  const mine = new Set(
+    Object.values(state.activities)
+      .filter((a) => a.createdBy === organizerOpenid)
+      .map((a) => a.id)
+  );
+  const byUser = {};
+  for (const r of state.registrations) {
+    if (!mine.has(r.activityId) || r.status !== 'confirmed') continue;
+    const u = byUser[r.openid] || (byUser[r.openid] = { openid: r.openid, confirmed: 0, attended: 0, noShow: 0 });
+    u.confirmed++;
+    if (r.attended === true) u.attended++;
+    else if (r.attended === false) u.noShow++;
+  }
+  return Object.values(byUser)
+    .map((u) => ({
+      ...u,
+      nickname: (state.users[u.openid] || {}).nickname || '球友',
+      rate: u.confirmed ? u.attended / u.confirmed : 0,
+    }))
+    .sort((a, b) => b.attended - a.attended || b.confirmed - a.confirmed);
+}
+
 module.exports = {
   httpError,
   toMs,
@@ -596,5 +622,6 @@ module.exports = {
   sendReminders,
   myRegistrations,
   myCreatedActivities,
+  attendanceStats,
   generateGroups,
 };

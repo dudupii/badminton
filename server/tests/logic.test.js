@@ -458,6 +458,36 @@ test('generateGroups: empty level defaults to weight 2', () => {
   assert.equal(pairs[0][1].weight, 2);
 });
 
+test('attendanceStats aggregates confirmed/attended/noShow across organizer activities', async () => {
+  const store = tmpStore();
+  const a1 = await logic.createActivity(store, { title: 'A1', startTime: '2099-01-01T10:00:00', capacity: 4 }, 'org', 1000);
+  const a2 = await logic.createActivity(store, { title: 'A2', startTime: '2099-02-01T10:00:00', capacity: 4 }, 'org', 2000);
+  // u1: two confirmed, both attended
+  await logic.register(store, a1.id, 'u1', 1100);
+  await logic.register(store, a2.id, 'u1', 2100);
+  await logic.markAttend(store, a1.id, 'org', 'u1', true);
+  await logic.markAttend(store, a2.id, 'org', 'u1', true);
+  // u2: one confirmed, no-show
+  await logic.register(store, a1.id, 'u2', 1200);
+  await logic.markAttend(store, a1.id, 'org', 'u2', false);
+  // someone else's activity — must be excluded
+  const other = await logic.createActivity(store, { title: 'X', startTime: '2099-03-01T10:00:00', capacity: 4 }, 'other', 3000);
+  await logic.register(store, other.id, 'u1', 3100);
+
+  const stats = logic.attendanceStats(store, 'org');
+  const u1 = stats.find((s) => s.openid === 'u1');
+  assert.equal(u1.confirmed, 2);
+  assert.equal(u1.attended, 2);
+  assert.equal(u1.noShow, 0);
+  assert.equal(u1.rate, 1);
+  const u2 = stats.find((s) => s.openid === 'u2');
+  assert.equal(u2.confirmed, 1);
+  assert.equal(u2.noShow, 1);
+  assert.equal(u2.rate, 0);
+  // sorted by attended desc → u1 first
+  assert.equal(stats[0].openid, 'u1');
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.
