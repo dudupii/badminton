@@ -342,6 +342,28 @@ test('setAvatar persists avatarUrl on the user record', async () => {
   assert.equal(after.avatarUrl, '/avatars/u1.png');
 });
 
+test('setFee sets activity.fee; rejects bad combos and non-creator', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4 }, 'org');
+  // total mode
+  const a = await logic.setFee(store, act.id, 'org', { totalCents: 12000, splitBy: 'confirmed' });
+  assert.equal(a.fee.totalCents, 12000);
+  assert.equal(a.fee.splitBy, 'confirmed');
+  // fixed mode
+  const b = await logic.setFee(store, act.id, 'org', { perPersonCents: 3000, splitBy: 'confirmed' });
+  assert.equal(b.fee.perPersonCents, 3000);
+  assert.equal(b.fee.totalCents, null);
+  // must choose exactly one of total/perPerson
+  await withError(400, logic.setFee(store, act.id, 'org', { splitBy: 'confirmed' })); // neither
+  await withError(400, logic.setFee(store, act.id, 'org', { totalCents: 1000, perPersonCents: 1000, splitBy: 'confirmed' })); // both
+  await withError(400, logic.setFee(store, act.id, 'org', { totalCents: 1000, splitBy: 'wednesday' })); // bad splitBy
+  // non-creator rejected
+  await withError(403, logic.setFee(store, act.id, 'stranger', { perPersonCents: 1000, splitBy: 'confirmed' }));
+  // clear fee with empty input
+  const c = await logic.setFee(store, act.id, 'org', {});
+  assert.equal(c.fee, null);
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

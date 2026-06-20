@@ -52,6 +52,7 @@ function publicActivity(a) {
     createdBy: a.createdBy,
     createdAt: a.createdAt,
     status: a.status, // 'open' | 'closed'
+    fee: a.fee || null,
   };
 }
 
@@ -309,6 +310,43 @@ async function updateActivity(store, id, actorOpenid, input) {
   });
 }
 
+// Set / clear an activity's fee. Exactly one of totalCents (split among the
+// pool) or perPersonCents (fixed per head) must be given alongside splitBy;
+// a completely empty body clears any existing fee.
+async function setFee(store, id, actorOpenid, input) {
+  const totalCents = input.totalCents == null ? null : Number(input.totalCents);
+  const perPersonCents = input.perPersonCents == null ? null : Number(input.perPersonCents);
+  const splitBy = input.splitBy;
+  const hasTotal = totalCents != null;
+  const hasPer = perPersonCents != null;
+  const hasSplit = splitBy != null;
+  const wantsSet = hasTotal || hasPer || hasSplit; // {} → clear; any field → set
+
+  if (hasTotal && hasPer) throw httpError(400, '总额与固定人均只能二选一');
+  if (wantsSet) {
+    if (!hasTotal && !hasPer) throw httpError(400, '需指定总额或人均');
+    if (splitBy !== 'confirmed' && splitBy !== 'attended') throw httpError(400, 'splitBy 取值非法');
+  }
+  if (hasTotal && (!Number.isInteger(totalCents) || totalCents < 0)) throw httpError(400, '总额需为非负整数（分）');
+  if (hasPer && (!Number.isInteger(perPersonCents) || perPersonCents < 0)) throw httpError(400, '人均需为非负整数（分）');
+
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以设置费用');
+    if (!wantsSet) {
+      a.fee = null;
+    } else {
+      a.fee = {
+        totalCents: hasTotal ? totalCents : null,
+        perPersonCents: hasPer ? perPersonCents : null,
+        splitBy,
+      };
+    }
+    return publicActivity(a);
+  });
+}
+
 async function deleteActivity(store, id, actorOpenid) {
   return store.txn((state) => {
     const a = state.activities[id];
@@ -454,6 +492,7 @@ module.exports = {
   getActivityByCode,
   setActivityStatus,
   updateActivity,
+  setFee,
   deleteActivity,
   register,
   cancel,

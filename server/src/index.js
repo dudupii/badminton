@@ -212,6 +212,13 @@ app.put(
   wrap(async (req) => logic.updateActivity(store, req.params.id, req.user.openid, req.body || {}))
 );
 
+// Set / clear the activity fee (creator only).
+app.put(
+  '/api/activities/:id/fee',
+  requireAuth,
+  wrap(async (req) => logic.setFee(store, req.params.id, req.user.openid, req.body || {}))
+);
+
 app.delete(
   '/api/activities/:id',
   requireAuth,
