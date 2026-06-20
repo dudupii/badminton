@@ -20,6 +20,9 @@ Page({
     feeSummary: null,
     feeEdit: { mode: 'total', amount: '', splitBy: 'confirmed' },
     myFee: null,
+    grouping: null,
+    groupMode: 'groups',
+    groupCount: 2,
   },
 
   onLoad(q) {
@@ -236,6 +239,29 @@ Page({
       data: rows.join('\n'),
       success: () => wx.showToast({ title: '费用表已复制到剪贴板', icon: 'none' }),
     });
+  },
+
+  onGroupModeChange(e) {
+    this.setData({ groupMode: e.detail.value === 1 ? 'pairs' : 'groups' });
+  },
+  onGroupCount(e) {
+    let v = parseInt(e.detail.value, 10);
+    if (isNaN(v) || v < 1) v = 1;
+    if (v > 20) v = 20;
+    this.setData({ groupCount: v });
+  },
+  async genGroups() {
+    try {
+      const r = await request(
+        'GET',
+        '/api/activities/' + this.data.id + '/grouping?mode=' + this.data.groupMode + '&count=' + this.data.groupCount
+      );
+      // Tag each group with a stable id so wx:key works (groups are arrays of arrays).
+      r.groups = (r.groups || []).map((members, i) => ({ id: i, members }));
+      this.setData({ grouping: r });
+    } catch (e) {
+      wx.showToast({ title: e.message, icon: 'none' });
+    }
   },
 
   async deleteActivity() {

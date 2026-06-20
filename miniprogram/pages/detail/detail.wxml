@@ -85,6 +85,30 @@
     <button class="btn btn-ghost" style="margin-top:16rpx;" bindtap="exportFee">导出费用表(CSV)</button>
   </view>
 
+  <!-- 水平分组（仅发起人） -->
+  <view class="card" wx:if="{{isCreator && detail.confirmed.length}}">
+    <view class="section-title">水平分组</view>
+    <view class="row" style="margin-top:12rpx;align-items:center;">
+      <text class="muted" style="width:140rpx;">模式</text>
+      <picker bindchange="onGroupModeChange" value="{{groupMode==='pairs'?1:0}}" range="{{['分N组(场地)','双打搭档']}}">
+        <view class="input" style="flex:1;">{{groupMode==='pairs'?'双打搭档':'分N组(场地)'}}</view>
+      </picker>
+    </view>
+    <view class="row" wx:if="{{groupMode==='groups'}}" style="margin-top:12rpx;align-items:center;">
+      <text class="muted" style="width:140rpx;">组数</text>
+      <input class="input" style="flex:1;" type="number" value="{{groupCount}}" bindinput="onGroupCount" />
+    </view>
+    <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="genGroups">生成</button>
+    <block wx:if="{{grouping}}">
+      <view wx:for="{{grouping.groups}}" wx:for-item="grp" wx:key="id" style="margin-top:16rpx;">
+        <view class="muted" style="font-weight:600;">{{grouping.mode==='pairs'?'搭档':'组'}} {{index+1}}</view>
+        <view wx:for="{{grp.members}}" wx:for-item="p" wx:key="openid" style="padding:4rpx 0;">
+          {{p.nickname}}（{{p.level||'未填'}}）
+        </view>
+      </view>
+    </block>
+  </view>
+
   <!-- invite QR -->
   <view class="card qr-card">
     <view class="section-title">邀请报名</view>
