@@ -3,7 +3,7 @@
   <view class="card">
     <view class="row between">
       <text class="title-lg">{{detail.title}}</text>
-      <text class="tag tag-closed" wx:if="{{detail.status === 'closed'}}">已关闭</text>
+      <text class="tag tag-closed" wx:if="{{detail.status === 'closed'}}">等待中</text>
       <text class="tag tag-open" wx:elif="{{!isPast}}">报名中</text>
       <text class="tag tag-closed" wx:else>已结束</text>
     </view>
