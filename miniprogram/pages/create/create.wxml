@@ -86,6 +86,29 @@
       </view>
       <view wx:if="{{repeatMode !== 0}}" class="muted" style="margin-top:10rpx;">将按所选间隔一次性生成多场（同标题/地点/名额），最多 12 场</view>
     </view>
+
+    <view class="field">
+      <view class="field-label">报名规则（可选）</view>
+      <view class="row" style="margin-top:12rpx;align-items:center;">
+        <switch checked="{{ruleNoShow}}" bindchange="toggleRuleNoShow" color="#16a34a"/>
+        <text style="margin-left:16rpx;">缺席惩罚</text>
+      </view>
+      <view wx:if="{{ruleNoShow}}" class="row" style="margin-top:12rpx;align-items:center;">
+        <text class="muted" style="width:160rpx;">缺席后禁报天数</text>
+        <input class="input" style="flex:1;" type="number" value="{{ruleNoShowDays}}" bindinput="onRuleNoShowDays" bindblur="onRuleNoShowDaysBlur"/>
+      </view>
+      <view wx:if="{{ruleNoShow}}" class="muted" style="margin-top:8rpx;font-size:24rpx;">曾缺席你活动的人，这段时间内无法报名（需先在详情页签到标"缺"）</view>
+
+      <view class="row" style="margin-top:16rpx;align-items:center;">
+        <switch checked="{{ruleLevel}}" bindchange="toggleRuleLevel" color="#16a34a"/>
+        <text style="margin-left:16rpx;">级别限制</text>
+      </view>
+      <view wx:if="{{ruleLevel}}" class="row" style="margin-top:12rpx;flex-wrap:wrap;">
+        <view wx:for="{{levelOptions}}" wx:key="*this" data-level="{{item}}" bindtap="toggleRuleLevelItem"
+              class="tag {{ruleLevels.indexOf(item) >= 0 ? 'tag-open' : 'tag-wait'}}" style="margin:6rpx 8rpx 0 0;">{{item}}</view>
+      </view>
+      <view wx:if="{{ruleLevel}}" class="muted" style="margin-top:8rpx;font-size:24rpx;">仅选中水平的球友可报名；没填水平的会被提示先去资料页填</view>
+    </view>
   </view>
 
   <button class="btn btn-primary" bindtap="submit" disabled="{{submitting}}">{{editId ? '保存修改' : '发起活动'}}</button>

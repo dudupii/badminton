@@ -29,6 +29,11 @@ Page({
     repeatOptions: ['不重复', '每天', '每周', '自定义'],
     repeatCount: 4, // how many sessions when repeating
     customStep: 7, // days between sessions when 自定义
+    levelOptions: ['新手', '初级', '中级', '高级'],
+    ruleNoShow: false,
+    ruleNoShowDays: 7,
+    ruleLevel: false,
+    ruleLevels: [],
   },
 
   onLoad(q) {
@@ -63,6 +68,14 @@ Page({
         patch.endTime = timeStr(end);
       }
       this.setData(patch);
+    if (a.rules) {
+      this.setData({
+        ruleNoShow: !!a.rules.noShowBanDays,
+        ruleNoShowDays: a.rules.noShowBanDays || 7,
+        ruleLevel: Array.isArray(a.rules.allowedLevels) && a.rules.allowedLevels.length > 0,
+        ruleLevels: (a.rules.allowedLevels || []).slice(),
+      });
+    }
     } catch (e) {
       wx.showToast({ title: e.message || '加载失败', icon: 'none' });
     }
@@ -142,6 +155,36 @@ Page({
     return { count, stepDays };
   },
 
+  toggleRuleNoShow() {
+    this.setData({ ruleNoShow: !this.data.ruleNoShow });
+  },
+  onRuleNoShowDays(e) {
+    this.setData({ ruleNoShowDays: e.detail.value }); // free typing while focused
+  },
+  onRuleNoShowDaysBlur(e) {
+    let v = parseInt(e.detail.value, 10);
+    if (isNaN(v) || v < 1) v = 1;
+    this.setData({ ruleNoShowDays: v });
+  },
+  toggleRuleLevel() {
+    this.setData({ ruleLevel: !this.data.ruleLevel });
+  },
+  toggleRuleLevelItem(e) {
+    const lv = e.currentTarget.dataset.level;
+    const set = this.data.ruleLevels.slice();
+    const i = set.indexOf(lv);
+    if (i === -1) set.push(lv);
+    else set.splice(i, 1);
+    this.setData({ ruleLevels: set });
+  },
+  buildRules() {
+    const d = this.data;
+    const rules = {};
+    if (d.ruleNoShow) rules.noShowBanDays = parseInt(d.ruleNoShowDays, 10) || 7;
+    if (d.ruleLevel && d.ruleLevels.length) rules.allowedLevels = d.ruleLevels.slice();
+    return Object.keys(rules).length ? rules : undefined;
+  },
+
   // Explicit per-field change handlers for the date/time pickers — avoids any
   // ambiguity from computed-key setData and keeps the tap target reliable.
   onStartDateChange(e) {
@@ -186,6 +229,8 @@ Page({
     };
     const repeat = d.editId ? null : this.buildRepeat();
     if (repeat) payload.repeat = repeat;
+    const rules = this.buildRules();
+    if (rules) payload.rules = rules;
 
     this.setData({ submitting: true });
     wx.showLoading({ title: d.editId ? '保存中' : '创建中' });
