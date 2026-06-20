@@ -15,6 +15,14 @@ const CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 const LEVELS = ['新手', '初级', '中级', '高级'];
 const GENDERS = ['男', '女', '不公开'];
 
+// Per-person amount owed given a fee config and the splitting-pool size.
+function perPersonOwedCents(fee, poolSize) {
+  if (!fee || !poolSize) return 0;
+  if (fee.totalCents != null) return Math.round(fee.totalCents / poolSize);
+  if (fee.perPersonCents != null) return fee.perPersonCents;
+  return 0;
+}
+
 function genCode(state, len = 6) {
   const existing = new Set(Object.values(state.activities).map((a) => a.code));
   for (let attempt = 0; attempt < 16; attempt++) {
@@ -225,27 +233,51 @@ function enrichActivity(state, a, viewerOpenid) {
   const confirmed = [];
   const waitlist = [];
   for (const r of regs) {
-    const u = state.users[r.openid] || { openid: r.openid, nickname: '未知球友', avatarUrl: '' };
+    const u = state.users[r.openid] || { openid: r.openid, nickname: '未知球友', avatarUrl: '', level: '', gender: '' };
     const entry = {
       openid: r.openid,
       nickname: u.nickname,
       avatarUrl: u.avatarUrl,
       level: u.level || '',
       gender: u.gender || '',
+      paid: !!r.paid,
+      attended: r.attended === undefined ? null : r.attended,
       createdAt: r.createdAt,
     };
     (confirmed.length < a.capacity ? confirmed : waitlist).push(entry);
+  }
+
+  // fee: who owes what
+  const fee = a.fee || null;
+  const pool = fee
+    ? fee.splitBy === 'attended' ? confirmed.filter((e) => e.attended === true) : confirmed
+    : [];
+  const owed = perPersonOwedCents(fee, pool.length);
+  const inPool = new Set(pool.map((e) => e.openid));
+  for (const e of confirmed) e.owedCents = inPool.has(e.openid) ? owed : 0;
+
+  let feeSummary = null;
+  if (fee) {
+    let totalOwed = 0;
+    let totalPaid = 0;
+    for (const e of confirmed) {
+      totalOwed += e.owedCents;
+      if (e.paid) totalPaid += e.owedCents;
+    }
+    feeSummary = { totalOwedCents: totalOwed, totalPaidCents: totalPaid, settled: totalPaid >= totalOwed && totalOwed > 0 };
   }
 
   const mine = viewerOpenid ? regs.find((r) => r.openid === viewerOpenid) : null;
 
   return {
     ...publicActivity(a),
+    fee,
+    feeSummary,
     confirmedCount: confirmed.length,
     waitlistCount: waitlist.length,
-    confirmed, // ordered, capacity-bounded
-    waitlist, // ordered remainder
-    myStatus: mine ? mine.status : null, // 'confirmed' | 'waitlist' | null
+    confirmed,
+    waitlist,
+    myStatus: mine ? mine.status : null,
   };
 }
 

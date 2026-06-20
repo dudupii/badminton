@@ -389,6 +389,38 @@ test('markAttend sets attended (true/false/null); organizer only', async () => {
   await withError(404, logic.markAttend(store, act.id, 'org', 'ghost', true));
 });
 
+test('enrichActivity computes per-person owedCents + feeSummary', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4 }, 'org');
+  await logic.register(store, act.id, 'u1', 1000);
+  await logic.register(store, act.id, 'u2', 2000);
+  await logic.register(store, act.id, 'u3', 3000); // 3 confirmed
+  await logic.setFee(store, act.id, 'org', { totalCents: 9000, splitBy: 'confirmed' }); // 9000/3 = 3000 each
+  let d = await logic.getActivity(store, act.id);
+  assert.equal(d.confirmed[0].owedCents, 3000);
+  assert.equal(d.feeSummary.totalOwedCents, 9000);
+  assert.equal(d.feeSummary.totalPaidCents, 0);
+  assert.equal(d.feeSummary.settled, false);
+
+  await logic.markPaid(store, act.id, 'org', 'u1', true);
+  d = await logic.getActivity(store, act.id);
+  assert.equal(d.feeSummary.totalPaidCents, 3000);
+  assert.equal(d.confirmed.find((x) => x.openid === 'u1').paid, true);
+
+  // attended split: only attendees split the total
+  await logic.markAttend(store, act.id, 'org', 'u1', true);
+  await logic.markAttend(store, act.id, 'org', 'u2', true); // 2 attended
+  await logic.setFee(store, act.id, 'org', { totalCents: 6000, splitBy: 'attended' }); // 6000/2 = 3000 each attendee
+  d = await logic.getActivity(store, act.id);
+  assert.equal(d.confirmed.find((x) => x.openid === 'u1').owedCents, 3000);
+  assert.equal(d.confirmed.find((x) => x.openid === 'u3').owedCents, 0); // didn't attend → owes 0
+
+  // fixed per-person mode
+  await logic.setFee(store, act.id, 'org', { perPersonCents: 2500, splitBy: 'confirmed' });
+  d = await logic.getActivity(store, act.id);
+  assert.equal(d.confirmed[0].owedCents, 2500);
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.
