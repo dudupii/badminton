@@ -535,6 +535,36 @@ test('register enforces level restriction (allowedLevels)', async () => {
   await withError(400, logic.register(store, act.id, 'u3', 3000)); // empty level blocked
 });
 
+test('register enforces no-show ban within window, same organizer only', async () => {
+  const store = tmpStore();
+  const DAY = 86400000;
+  const T0 = 1_000_000_000; // a past activity's start time
+  // organizer 'org' ran a past activity; u1 no-showed
+  const past = await logic.createActivity(store, { title: 'past', startTime: T0, capacity: 4 }, 'org', 100);
+  await logic.register(store, past.id, 'u1', T0 - DAY); // registered before start
+  await logic.markAttend(store, past.id, 'org', 'u1', false); // marked absent
+
+  // a NEW org activity with noShowBanDays=7, start far future
+  const next = await logic.createActivity(store, { title: 'next', startTime: T0 + 365 * DAY, capacity: 4, rules: { noShowBanDays: 7 } }, 'org', 200);
+  // within 7-day window → BANNED
+  await withError(400, logic.register(store, next.id, 'u1', T0 + 1 * DAY));
+  // outside window → OK
+  assert.equal((await logic.register(store, next.id, 'u1', T0 + 8 * DAY)).status, 'confirmed');
+
+  // cross-organizer: u2 no-showed a DIFFERENT organizer's activity → not banned from org's
+  const pastOther = await logic.createActivity(store, { title: 'pastOther', startTime: T0, capacity: 4 }, 'other', 300);
+  await logic.register(store, pastOther.id, 'u2', T0 - DAY);
+  await logic.markAttend(store, pastOther.id, 'other', 'u2', false);
+  const next2 = await logic.createActivity(store, { title: 'next2', startTime: T0 + 365 * DAY, capacity: 4, rules: { noShowBanDays: 7 } }, 'org', 400);
+  assert.equal((await logic.register(store, next2.id, 'u2', T0 + 1 * DAY)).status, 'confirmed'); // not banned
+
+  // attended === null (unsigned) does NOT count as no-show
+  const past2 = await logic.createActivity(store, { title: 'past2', startTime: T0, capacity: 4 }, 'org', 500);
+  await logic.register(store, past2.id, 'u3', T0 - DAY); // not marked attended
+  const next3 = await logic.createActivity(store, { title: 'next3', startTime: T0 + 365 * DAY, capacity: 4, rules: { noShowBanDays: 7 } }, 'org', 600);
+  assert.equal((await logic.register(store, next3.id, 'u3', T0 + 1 * DAY)).status, 'confirmed');
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

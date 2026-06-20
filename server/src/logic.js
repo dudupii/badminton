@@ -499,6 +499,23 @@ async function register(store, activityId, openid, now = Date.now()) {
       }
     }
 
+    // --- activity rules: no-show ban (same organizer, within window) --------
+    if (rules.noShowBanDays && rules.noShowBanDays > 0) {
+      const cutoff = now - rules.noShowBanDays * 86400000;
+      const prior = state.registrations.find((r) => {
+        if (r.openid !== openid || r.attended !== false) return false;
+        const pa = state.activities[r.activityId];
+        return !!pa && pa.createdBy === a.createdBy && pa.startTime <= now && pa.startTime > cutoff;
+      });
+      if (prior) {
+        const d = new Date(state.activities[prior.activityId].startTime);
+        throw httpError(
+          400,
+          '你于 ' + (d.getMonth() + 1) + '月' + d.getDate() + '日 缺席过该组织者的活动，' + rules.noShowBanDays + ' 天内无法报名'
+        );
+      }
+    }
+
     const confirmedCount = regs.filter((r) => r.status === 'confirmed').length;
     const status = confirmedCount < a.capacity ? 'confirmed' : 'waitlist';
 
