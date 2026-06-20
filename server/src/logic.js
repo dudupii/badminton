@@ -347,6 +347,22 @@ async function setFee(store, id, actorOpenid, input) {
   });
 }
 
+// Mark a registrant paid/unpaid. Organizer only. Returns the updated slice.
+async function markPaid(store, activityId, actorOpenid, targetOpenid, paid) {
+  return store.txn((state) => {
+    const a = state.activities[activityId];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    const r = state.registrations.find(
+      (x) => x.activityId === activityId && x.openid === targetOpenid && x.status !== 'cancelled'
+    );
+    if (!r) throw httpError(404, '该用户未报名');
+    r.paid = !!paid;
+    r.paidAt = r.paid ? Date.now() : null;
+    return { openid: r.openid, paid: r.paid, paidAt: r.paidAt };
+  });
+}
+
 async function deleteActivity(store, id, actorOpenid) {
   return store.txn((state) => {
     const a = state.activities[id];
@@ -493,6 +509,7 @@ module.exports = {
   setActivityStatus,
   updateActivity,
   setFee,
+  markPaid,
   deleteActivity,
   register,
   cancel,

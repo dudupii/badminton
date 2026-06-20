@@ -219,6 +219,14 @@ app.put(
   wrap(async (req) => logic.setFee(store, req.params.id, req.user.openid, req.body || {}))
 );
 
+app.post(
+  '/api/activities/:id/roster/:openid/paid',
+  requireAuth,
+  wrap(async (req) =>
+    logic.markPaid(store, req.params.id, req.user.openid, req.params.openid, !!(req.body && req.body.paid))
+  )
+);
+
 app.delete(
   '/api/activities/:id',
   requireAuth,
