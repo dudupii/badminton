@@ -84,6 +84,13 @@ openid → HMAC-SHA256 自签 token（无 JWT 依赖）。前端 `utils/request.
 - **前端**：详情页"水平分组"卡的模式 picker 加「轮转表」；输入场数/轮数/水平模式；固定搭档用"点1人→点1人配对"勾选（`rotFixed` 二维 + `rotFixedFlat` 平铺供 wxml 高亮）；生成后展示 R 轮×C 场表（名字带**报名序号**「N-名字」，`_injectRotationNo` 按 confirmed 顺序注入）；可重新生成/清除。**导出 PNG**：`exportRotation()` 复用离屏 `#poster` canvas（动态设 buffer 高度）画整张轮转表 → `canvasToTempFilePath` → `previewImage`（长按存/转发）。
 - **风险**：贪心非最优，极端人数/场数下公平或同质可能略不均，自用可接受；要更优后续上模拟退火（YAGNI）。
 
+**Phase 5.3（逐轮动态会话）的实现要点：**
+- **动机**：晚到/早退——预排全表假设全员全程，实际有人晚到前几轮不在、有人早退后几轮不在。逐轮动态模式每轮由组织者勾在场者→系统排当轮场地。
+- **数据模型**：`activity.session = {courts, levelMode, matchFormat, currentRound, rounds:[{courts,resting,present}], games:{}, lastRest:{}, startedAt}`（与 `rotation` 并列；`publicActivity` 透出）。
+- **算法** `assignOneRound(presentPlayers, {courts, levelMode, matchFormat, fixedPairs, games, lastRest})` **纯函数**——从 `generateRotation` 循环体抽出（重构后 generateRotation 内部也调它，既有测试全过）。逻辑完全一致：不连休（上轮休者本轮必上场）+ 公平（最少上场优先）+ 水平/赛制分场。`games`/`lastRest` **跨轮累计**（传递同一对象引用，原地修改持久化）。
+- **端点**：`POST /session/start`（初始化 games/lastRest 清零）→ `POST /session/assign`（body `{present:[openid]}`，排当轮、推进 currentRound）→ `GET /session`（读进度）→ `DELETE /session`（清除）。全部仅发起人（403）。
+- **前端**：详情页"水平分组"卡模式 picker 第四项「逐轮(动态)」→ 设场数/水平/赛制 →「开始会话」→ 每轮：球员名单带「在场」开关（默认全选）→「排本轮」→ 显示场地分配 →「下一轮」→ 历史轮次折叠展示。晚到/早退自然处理（不在就不勾）。
+
 ## 陷阱与非显而易见的事
 
 - **测试是针对 `logic.js` 的单元级**（用内存 `Store`），不经过 HTTP。要验证 HTTP 层/路由，`curl` 正在跑的服务器；后端有请求日志中间件（跳过 health 与 OPTIONS），每个请求一行 `方法 路径 -> 状态 (耗时)`。
