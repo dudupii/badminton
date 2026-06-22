@@ -361,9 +361,12 @@ Page({
     if (!rot || !rot.schedule) return wx.showToast({ title: '请先生成轮转', icon: 'none' });
     const rosterMap = {};
     (detail.confirmed || []).forEach((x, i) => { rosterMap[x.openid] = { no: i + 1, nickname: x.nickname || '' }; });
-    const label = (p) =>
-      (p.no || (rosterMap[p.openid] && rosterMap[p.openid].no) || '?') + '-' +
-      (p.nickname != null ? p.nickname : (rosterMap[p.openid] && rosterMap[p.openid].nickname) || '');
+    const label = (p) => {
+      const oid = typeof p === 'string' ? p : p.openid;
+      const r = rosterMap[oid] || {};
+      return (typeof p === 'object' ? (p.no || r.no || '?') : (r.no || '?')) + '-' +
+        (typeof p === 'object' && p.nickname != null ? p.nickname : (r.nickname || ''));
+    };
     const lines = [(detail.title || '活动') + ' · 轮转表'];
     rot.schedule.forEach((rd, ri) => {
       lines.push('第' + (ri + 1) + '轮');
