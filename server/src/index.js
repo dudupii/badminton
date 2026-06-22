@@ -282,6 +282,25 @@ app.get(
   })
 );
 
+app.post(
+  '/api/activities/:id/rotation',
+  requireAuth,
+  wrap(async (req) => logic.setRotation(store, req.params.id, req.user.openid, req.body || {}))
+);
+app.get(
+  '/api/activities/:id/rotation',
+  optionalAuth,
+  wrap(async (req) => {
+    const d = await logic.getActivity(store, req.params.id, req.user && req.user.openid);
+    return d.rotation || null;
+  })
+);
+app.delete(
+  '/api/activities/:id/rotation',
+  requireAuth,
+  wrap(async (req) => logic.clearRotation(store, req.params.id, req.user.openid))
+);
+
 // --- registrations ----------------------------------------------------------
 app.post(
   '/api/activities/:id/register',

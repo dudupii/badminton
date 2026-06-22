@@ -218,6 +218,7 @@ function publicActivity(a) {
     status: a.status, // 'open' | 'closed'
     fee: a.fee || null,
     rules: a.rules || null,
+    rotation: a.rotation || null,
   };
 }
 
@@ -543,6 +544,49 @@ async function setFee(store, id, actorOpenid, input) {
   });
 }
 
+// Generate + persist a multi-round rotation for the activity. Pool = confirmed
+// registrants who aren't marked absent (attended !== false). Creator only.
+async function setRotation(store, id, actorOpenid, params) {
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    const regs = state.registrations
+      .filter((r) => r.activityId === id && r.status !== 'cancelled')
+      .sort((x, y) => x.createdAt - y.createdAt || (x.id < y.id ? -1 : 1));
+    // confirmed (capacity-bounded), same order as the first `capacity` regs
+    const confirmed = [];
+    for (const r of regs) {
+      if (confirmed.length >= a.capacity) break;
+      const u = state.users[r.openid] || { openid: r.openid, nickname: '未知球友', level: '' };
+      confirmed.push({ reg: r, entry: { openid: r.openid, nickname: u.nickname, level: u.level || '' } });
+    }
+    // pool = attended (exclude explicit absentees); reg & entry stay aligned
+    const pool = confirmed.filter((c) => c.reg.attended !== false).map((c) => c.entry);
+    const { schedule, resting } = generateRotation(pool, params); // throws 400 if too few
+    a.rotation = {
+      courts: Number(params.courts) || 1,
+      rounds: Number(params.rounds) || 1,
+      levelMode: params.levelMode === 'balanced' ? 'balanced' : 'homogeneous',
+      fixedPairs: Array.isArray(params.fixedPairs) ? params.fixedPairs : [],
+      schedule,
+      resting,
+      generatedAt: Date.now(),
+    };
+    return publicActivity(a);
+  });
+}
+
+async function clearRotation(store, id, actorOpenid) {
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    a.rotation = null;
+    return { cleared: true };
+  });
+}
+
 // Mark a registrant paid/unpaid. Organizer only. Returns the updated slice.
 async function markPaid(store, activityId, actorOpenid, targetOpenid, paid) {
   return store.txn((state) => {
@@ -809,4 +853,6 @@ module.exports = {
   attendanceStats,
   generateGroups,
   generateRotation,
+  setRotation,
+  clearRotation,
 };

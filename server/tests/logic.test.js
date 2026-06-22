@@ -711,6 +711,25 @@ test('generateRotation: fixed pairs end up on the same court', () => {
   assert.equal(courtOf['u0'], courtOf['u5'], 'fixed pair reunited');
 });
 
+test('setRotation stores + clearRotation removes; creator only; pool = attended', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 20 }, 'org');
+  for (let i = 0; i < 10; i++) await logic.register(store, act.id, 'u' + i, 1000 + i);
+  for (let i = 0; i < 10; i++) await logic.markAttend(store, act.id, 'org', 'u' + i, i < 8); // u0..u7 attended, u8/u9 absent
+  await withError(403, logic.setRotation(store, act.id, 'stranger', { courts: 2, rounds: 1, levelMode: 'homogeneous', fixedPairs: [] }));
+  const r = await logic.setRotation(store, act.id, 'org', { courts: 2, rounds: 1, levelMode: 'homogeneous', fixedPairs: [] });
+  assert.equal(r.rotation.schedule.length, 1);
+  assert.equal(r.rotation.schedule[0][0].length, 4);
+  const d = await logic.getActivity(store, act.id);
+  assert.ok(d.rotation && d.rotation.schedule.length === 1);
+  const ids = new Set();
+  d.rotation.schedule.forEach((rd) => rd.forEach((c) => c.forEach((p) => ids.add(p.openid))));
+  assert.ok(!ids.has('u8') && !ids.has('u9')); // absent excluded from pool
+  await logic.clearRotation(store, act.id, 'org');
+  assert.equal((await logic.getActivity(store, act.id)).rotation, null);
+  await withError(403, logic.clearRotation(store, act.id, 'stranger'));
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.
