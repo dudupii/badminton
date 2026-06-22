@@ -139,6 +139,7 @@
 
       <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="genRotation">生成轮转</button>
       <button wx:if="{{detail.rotation}}" class="btn btn-ghost" style="margin-top:12rpx;" bindtap="clearRotation">清除轮转</button>
+      <button wx:if="{{detail.rotation}}" class="btn btn-ghost" style="margin-top:12rpx;" bindtap="exportRotation">导出轮转表(图片)</button>
 
       <block wx:if="{{detail.rotation}}">
         <view wx:for="{{detail.rotation.schedule}}" wx:for-item="round" wx:key="*this" style="margin-top:16rpx;">

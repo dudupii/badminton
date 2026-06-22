@@ -330,6 +330,82 @@ Page({
       wx.showToast({ title: e.message, icon: 'none' });
     }
   },
+  async exportRotation() {
+    const detail = this.data.detail;
+    const rot = detail && detail.rotation;
+    if (!rot || !rot.schedule) return wx.showToast({ title: '请先生成轮转', icon: 'none' });
+    wx.showLoading({ title: '生成图片' });
+    try {
+      // 名字/号码映射（schedule 已注入 no；resting 只有 openid，需查名单）
+      const rosterMap = {};
+      (detail.confirmed || []).forEach((x, i) => { rosterMap[x.openid] = { no: i + 1, nickname: x.nickname || '' }; });
+      const label = (p) =>
+        (p.no || (rosterMap[p.openid] && rosterMap[p.openid].no) || '?') +
+        '-' +
+        (p.nickname != null ? p.nickname : (rosterMap[p.openid] && rosterMap[p.openid].nickname) || '');
+
+      const W = 375;
+      const lineH = 36;
+      const pad = 24;
+      const courts = rot.schedule[0] ? rot.schedule[0].length : 1;
+      const lines = 2 + rot.schedule.length * (1 + courts + 1); // 标题2 + 每轮(轮头+courts+休息)
+      const H = lines * lineH + pad * 2;
+
+      const { canvas, ctx } = await new Promise((res, rej) => {
+        wx.createSelectorQuery()
+          .select('#poster')
+          .fields({ node: true })
+          .exec((r) => (r && r[0] && r[0].node ? res({ canvas: r[0].node, ctx: r[0].node.getContext('2d') }) : rej(new Error('canvas 不存在'))));
+      });
+      const dpr = wx.getSystemInfoSync().pixelRatio;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      ctx.scale(dpr, dpr);
+
+      // 背景
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, W, H);
+
+      // 标题
+      ctx.fillStyle = '#111827';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText((detail.title || '活动') + ' · 轮转表', pad, pad + 24);
+      let y = pad + 24 + lineH;
+
+      // 逐轮
+      rot.schedule.forEach((rd, ri) => {
+        ctx.fillStyle = '#16a34a';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillText('第 ' + (ri + 1) + ' 轮', pad, y);
+        y += lineH;
+        ctx.fillStyle = '#374151';
+        ctx.font = '22px sans-serif';
+        rd.forEach((c, ci) => {
+          ctx.fillText('  场' + (ci + 1) + ': ' + c.map(label).join(' / '), pad, y);
+          y += lineH;
+        });
+        const rest = (rot.resting[ri] || []).map(label).join('、');
+        ctx.fillStyle = '#9ca3af';
+        ctx.fillText('  休息: ' + (rest || '无'), pad, y);
+        y += lineH;
+      });
+
+      wx.canvasToTempFilePath({
+        canvas,
+        success: (out) => {
+          wx.hideLoading();
+          wx.previewImage({ urls: [out.tempFilePath] }); // 长按可存相册/转发
+        },
+        fail: () => {
+          wx.hideLoading();
+          wx.showToast({ title: '生成失败', icon: 'none' });
+        },
+      });
+    } catch (e) {
+      wx.hideLoading();
+      wx.showToast({ title: e.message || '生成失败', icon: 'none' });
+    }
+  },
   onRotCourts(e) { this.setData({ rotCourts: e.detail.value }); },
   onRotCourtsBlur(e) { let v = parseInt(e.detail.value, 10); this.setData({ rotCourts: isNaN(v) || v < 1 ? 1 : v }); },
   onRotRounds(e) { this.setData({ rotRounds: e.detail.value }); },
