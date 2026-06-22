@@ -449,6 +449,9 @@ function enrichActivity(state, a, viewerOpenid) {
     };
     (confirmed.length < a.capacity ? confirmed : waitlist).push(entry);
   }
+  // Assign roster numbers (1-based by registration order: confirmed first, then waitlist).
+  confirmed.forEach((e, i) => { e.no = i + 1; });
+  waitlist.forEach((e, i) => { e.no = confirmed.length + i + 1; });
 
   // fee: who owes what
   const fee = a.fee || null;
@@ -662,7 +665,7 @@ async function assignSession(store, id, actorOpenid, { present }) {
     for (const r of regs) {
       if (confirmed.length >= a.capacity) break;
       const u = state.users[r.openid] || { openid: r.openid, nickname: '未知球友', level: '', gender: '' };
-      confirmed.push({ openid: r.openid, nickname: u.nickname, level: u.level || '', gender: u.gender || '' });
+      confirmed.push({ openid: r.openid, nickname: u.nickname, level: u.level || '', gender: u.gender || '', no: confirmed.length + 1 });
     }
     const presentSet = new Set(present || []);
     const presentPlayers = confirmed.filter((p) => presentSet.has(p.openid));
