@@ -79,7 +79,7 @@ openid → HMAC-SHA256 自签 token（无 JWT 依赖）。前端 `utils/request.
 
 **Phase 5（轮转调度）的实现要点：**
 - **数据模型**：`activity.rotation = {courts, rounds, levelMode, fixedPairs, schedule, resting, generatedAt}`（覆盖式更新；`publicActivity` 透出）。`schedule` 是**生成时快照**（存当时的昵称/水平，后续资料变化不刷新；重新生成才更新）。
-- **算法** `generateRotation(players, {courts, rounds, levelMode, fixedPairs})` **纯函数**（无 store，TDD）：逐轮贪心——上一轮休息者本轮**必上场**（满足"不连休"硬约束；当**人数 > 8×场数**避不开时，按 `gamesPlayed` 最少取 `4×courts` 个、其余无奈连休，不报错）；剩余名额按"上场次数最少优先"补（公平，软）；分场：`homogeneous`=按 weight 连续切片（同质）/`balanced`=蛇形；固定搭档被切片切开时单遍交换归拢（软）。**连打不限**。`players < 4×courts` → 400（填不满）。
+- **算法** `generateRotation(players, {courts, rounds, levelMode, fixedPairs, matchFormat})` **纯函数**（无 store，TDD）：逐轮贪心——上一轮休息者本轮**必上场**（满足"不连休"硬约束；当**人数 > 8×场数**避不开时，按 `gamesPlayed` 最少取 `4×courts` 个、其余无奈连休，不报错）；剩余名额按"上场次数最少优先"补（公平，软）；分场：`homogeneous`=按 weight 连续切片（同质）/`balanced`=蛇形；固定搭档被切片切开时单遍交换归拢（软）。**连打不限**。`players < 4×courts` → 400（填不满）。**赛制** `matchFormat`（`any`缺省/`mens`/`womens`/`mixed`）：分场时先 `extractFormatCourt` 按性别抽 1 场赛制场（当轮上场者够才抽，不够退回水平分），**选人/公平/不连休完全不动**；少数性别+少场地时该场可能很少出现（已知限制）。
 - **端点**：`POST/GET/DELETE /api/activities/:id/rotation`。POST/DELETE 仅发起人（403 否则）；GET 公开（`optionalAuth`）。**池 = confirmed 且 `attended !== false`**（开赛后未签到者默认到场、已含；显式"缺"排除）——`setRotation` 里 reg 与 entry 配对过滤保对齐。
 - **前端**：详情页"水平分组"卡的模式 picker 加「轮转表」；输入场数/轮数/水平模式；固定搭档用"点1人→点1人配对"勾选（`rotFixed` 二维 + `rotFixedFlat` 平铺供 wxml 高亮）；生成后展示 R 轮×C 场表；可重新生成/清除。
 - **风险**：贪心非最优，极端人数/场数下公平或同质可能略不均，自用可接受；要更优后续上模拟退火（YAGNI）。
