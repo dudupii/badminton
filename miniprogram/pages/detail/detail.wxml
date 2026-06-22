@@ -91,8 +91,8 @@
     <view class="section-title">水平分组</view>
     <view class="row" style="margin-top:12rpx;align-items:center;">
       <text class="muted" style="width:140rpx;">模式</text>
-      <picker bindchange="onGroupModeChange" value="{{groupMode==='pairs'?1:groupMode==='rotation'?2:0}}" range="{{['分N组(场地)','双打搭档','轮转表']}}">
-        <view class="input" style="flex:1;">{{groupMode==='rotation'?'轮转表':groupMode==='pairs'?'双打搭档':'分N组(场地)'}}</view>
+      <picker bindchange="onGroupModeChange" value="{{groupMode==='pairs'?1:groupMode==='rotation'?2:groupMode==='session'?3:0}}" range="{{['分N组(场地)','双打搭档','轮转表','逐轮(动态)']}}">
+        <view class="input" style="flex:1;">{{groupMode==='session'?'逐轮(动态)':groupMode==='rotation'?'轮转表':groupMode==='pairs'?'双打搭档':'分N组(场地)'}}</view>
       </picker>
     </view>
     <view class="row" wx:if="{{groupMode==='groups'}}" style="margin-top:12rpx;align-items:center;">
@@ -149,6 +149,41 @@
             <text class="muted">场{{ci+1}}：</text>{{court[0].no}}-{{court[0].nickname}}{{court[1] ? ' / ' + court[1].no + '-' + court[1].nickname : ''}}{{court[2] ? ' / ' + court[2].no + '-' + court[2].nickname : ''}}{{court[3] ? ' / ' + court[3].no + '-' + court[3].nickname : ''}}
           </view>
         </view>
+      </block>
+    </block>
+
+    <block wx:if="{{groupMode === 'session'}}">
+      <block wx:if="{{!sessStarted}}">
+        <view class="row" style="margin-top:12rpx;align-items:center;">
+          <text class="muted" style="width:140rpx;">场地数</text>
+          <input class="input" style="flex:1;" type="number" value="{{sessCourts}}" bindinput="onSessCourts" bindblur="onSessCourtsBlur"/>
+        </view>
+        <view class="row" style="margin-top:12rpx;align-items:center;">
+          <text class="muted" style="width:140rpx;">水平</text>
+          <picker bindchange="onSessLevelMode" value="{{sessLevelMode==='balanced'?1:0}}" range="{{['同质','均衡']}}"><view class="input" style="flex:1;">{{sessLevelMode==='balanced'?'均衡':'同质'}}</view></picker>
+        </view>
+        <view class="row" style="margin-top:12rpx;align-items:center;">
+          <text class="muted" style="width:140rpx;">赛制</text>
+          <picker bindchange="onSessMatchFormat" value="{{sessMatchFormat==='mens'?1:sessMatchFormat==='womens'?2:sessMatchFormat==='mixed'?3:0}}" range="{{['不限','男双','女双','混双']}}"><view class="input" style="flex:1;">{{sessMatchFormat==='mens'?'男双':sessMatchFormat==='womens'?'女双':sessMatchFormat==='mixed'?'混双':'不限'}}</view></picker>
+        </view>
+        <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="startSession">开始会话</button>
+      </block>
+      <block wx:else>
+        <view class="muted" style="margin-top:12rpx;font-size:24rpx;">第 {{detail.session.currentRound + 1}} 轮 · 勾选在场者后「排本轮」</view>
+        <view class="row" style="margin-top:8rpx;flex-wrap:wrap;">
+          <view wx:for="{{detail.confirmed}}" wx:key="openid" data-openid="{{item.openid}}" bindtap="toggleSessPresent"
+                class="tag {{sessPresent[item.openid] ? 'tag-open' : 'tag-wait'}}" style="margin:6rpx 8rpx 0 0;">{{item.nickname}}</view>
+        </view>
+        <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="assignSession">排本轮</button>
+        <button wx:if="{{detail.session}}" class="btn btn-danger" style="margin-top:8rpx;" bindtap="clearSession">结束会话</button>
+        <block wx:if="{{detail.session && detail.session.rounds.length}}">
+          <view wx:for="{{detail.session.rounds}}" wx:for-item="rd" wx:key="*this" style="margin-top:16rpx;">
+            <view class="muted" style="font-weight:600;">第 {{index + 1}} 轮</view>
+            <view wx:for="{{rd.courts}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="padding:4rpx 0;">
+              <text class="muted">场{{ci+1}}：</text>{{court[0].nickname}}{{court[1]?'/'+court[1].nickname:''}}{{court[2]?'/'+court[2].nickname:''}}{{court[3]?'/'+court[3].nickname:''}}
+            </view>
+          </view>
+        </block>
       </block>
     </block>
   </view>

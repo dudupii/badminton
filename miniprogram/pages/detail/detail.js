@@ -30,6 +30,11 @@ Page({
     rotFixedFlat: [], // openids that are in some fixed pair (for wxml highlight)
     rotPairPick: null, // openid of first half-picked pair, or null
     rotMatchFormat: 'any', // any|mens|womens|mixed
+    sessCourts: 3,
+    sessLevelMode: 'homogeneous',
+    sessMatchFormat: 'any',
+    sessPresent: {},
+    sessStarted: false,
   },
 
   onLoad(q) {
@@ -113,6 +118,7 @@ Page({
         feeSummary: d.feeSummary,
         myFee: (d.confirmed || []).find((x) => x.openid === me) || null,
         rules: d.rules,
+        sessStarted: !!(d.session && d.session.currentRound > 0),
       });
     } catch (e) {
       this.setData({ loading: false });
@@ -271,7 +277,7 @@ Page({
 
   onGroupModeChange(e) {
     const idx = Number(e.detail.value);
-    this.setData({ groupMode: ['groups', 'pairs', 'rotation'][idx] || 'groups' });
+    this.setData({ groupMode: ['groups', 'pairs', 'rotation', 'session'][idx] || 'groups' });
   },
   onGroupCount(e) {
     this.setData({ groupCount: e.detail.value }); // free typing while focused
@@ -369,6 +375,41 @@ Page({
       success: () => wx.showToast({ title: '轮转表已复制到剪贴板', icon: 'none' }),
     });
   },
+  async startSession() {
+    const d = this.data;
+    try {
+      const r = await request('POST', '/api/activities/' + d.id + '/session/start', {
+        courts: d.sessCourts, levelMode: d.sessLevelMode, matchFormat: d.sessMatchFormat,
+      });
+      const present = {};
+      (d.detail.confirmed || []).forEach((p) => { present[p.openid] = true; });
+      this.setData({ detail: { ...d.detail, session: r.session }, sessPresent: present, sessStarted: true });
+    } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
+  },
+  toggleSessPresent(e) {
+    const oid = e.currentTarget.dataset.openid;
+    const p = Object.assign({}, this.data.sessPresent);
+    p[oid] = !p[oid];
+    this.setData({ sessPresent: p });
+  },
+  async assignSession() {
+    const d = this.data;
+    const present = Object.keys(d.sessPresent).filter((k) => d.sessPresent[k]);
+    try {
+      const r = await request('POST', '/api/activities/' + d.id + '/session/assign', { present });
+      this.setData({ detail: { ...d.detail, session: r.session } });
+    } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
+  },
+  async clearSession() {
+    try {
+      await request('DELETE', '/api/activities/' + this.data.id + '/session');
+      this.setData({ detail: { ...this.data.detail, session: null }, sessStarted: false });
+    } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
+  },
+  onSessCourts(e) { this.setData({ sessCourts: e.detail.value }); },
+  onSessCourtsBlur(e) { let v = parseInt(e.detail.value, 10); this.setData({ sessCourts: isNaN(v) || v < 1 ? 1 : v }); },
+  onSessLevelMode(e) { this.setData({ sessLevelMode: Number(e.detail.value) === 1 ? 'balanced' : 'homogeneous' }); },
+  onSessMatchFormat(e) { this.setData({ sessMatchFormat: ['any','mens','womens','mixed'][Number(e.detail.value)] || 'any' }); },
   onRotCourts(e) { this.setData({ rotCourts: e.detail.value }); },
   onRotCourtsBlur(e) { let v = parseInt(e.detail.value, 10); this.setData({ rotCourts: isNaN(v) || v < 1 ? 1 : v }); },
   onRotRounds(e) { this.setData({ rotRounds: e.detail.value }); },
