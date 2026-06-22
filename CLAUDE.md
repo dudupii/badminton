@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 这是什么
 
-羽毛球活动报名**微信小程序 + Node/Express 后端**。功能：发起活动（名额/时间）、用微信身份报名、名额满转候补、有人取消按 FIFO 自动上位、每个活动生成二维码供他人扫码报名。Phase 1 加了组织者向四件套：**复制上一场**（`GET /api/activities/created-by/me`，+7 天顺延）、**候补上位订阅通知**（一次性订阅消息，事件驱动）、**水平/性别标签**（用户资料 + 名单徽章 + 男/女汇总）、**可分享运动主题海报**（canvas 2d）。Phase 2 又加了：**活动编辑**（`PUT /api/activities/:id`，仅发起人，名额不可低于已正式人数）、**周期活动**（`POST /api/activities` 带 `repeat`，一次生成≤12 场）、**报名成功 + 活动前提醒订阅**（提醒靠唯一的 `setInterval` 调度器）、**头像持久化**（`POST /api/user/me/avatar` base64 上传，本地文件 + `express.static('/avatars')`）。Phase 3（自用打深）加了：**球费 AA**（`fee` 字段存「分」，总额均摊/固定人均两种、按正式/按实到，记账+签到+导出，不接支付）、**水平分组**（`generateGroups` 蛇形/首尾配对，按需算不入库）、**出勤统计**（`attendanceStats` 跨活动聚合实到/放鸽子）。Phase 4（报名规则）加了：**缺席惩罚 + 级别限制**两条可选规则（`activity.rules`，缺省都不启用），`register()` 报名时即时校验——缺席惩罚按"同组织者 + 窗口内 + `attended===false`"判，级别限制拦空水平。Phase 4.5（规则增强）扩成：级别限制**双模式**（`allowedLevels` 白名单 或 `minLevel` 某级以上，互斥）、新增性别限制 `allowedGenders`（⊆{男,女}，"不公开"拦）、缺席惩罚加**取消截止** `cancelDeadlineHours`（`cancel()` 过截止取消会标 `attended=false` 算缺席）+ 详情页警告横幅。
+羽毛球活动报名**微信小程序 + Node/Express 后端**。功能：发起活动（名额/时间）、用微信身份报名、名额满转候补、有人取消按 FIFO 自动上位、每个活动生成二维码供他人扫码报名。Phase 1 加了组织者向四件套：**复制上一场**（`GET /api/activities/created-by/me`，+7 天顺延）、**候补上位订阅通知**（一次性订阅消息，事件驱动）、**水平/性别标签**（用户资料 + 名单徽章 + 男/女汇总）、**可分享运动主题海报**（canvas 2d）。Phase 2 又加了：**活动编辑**（`PUT /api/activities/:id`，仅发起人，名额不可低于已正式人数）、**周期活动**（`POST /api/activities` 带 `repeat`，一次生成≤12 场）、**报名成功 + 活动前提醒订阅**（提醒靠唯一的 `setInterval` 调度器）、**头像持久化**（`POST /api/user/me/avatar` base64 上传，本地文件 + `express.static('/avatars')`）。Phase 3（自用打深）加了：**球费 AA**（`fee` 字段存「分」，总额均摊/固定人均两种、按正式/按实到，记账+签到+导出，不接支付）、**水平分组**（`generateGroups` 蛇形/首尾配对，按需算不入库）、**出勤统计**（`attendanceStats` 跨活动聚合实到/放鸽子）。Phase 4（报名规则）加了：**缺席惩罚 + 级别限制**两条可选规则（`activity.rules`，缺省都不启用），`register()` 报名时即时校验——缺席惩罚按"同组织者 + 窗口内 + `attended===false`"判，级别限制拦空水平。Phase 4.5（规则增强）扩成：级别限制**双模式**（`allowedLevels` 白名单 或 `minLevel` 某级以上，互斥）、新增性别限制 `allowedGenders`（⊆{男,女}，"不公开"拦）、缺席惩罚加**取消截止** `cancelDeadlineHours`（`cancel()` 过截止取消会标 `attended=false` 算缺席）+ 详情页警告横幅。Phase 5（轮转调度）加了：**多轮场地轮转**（`activity.rotation`，`generateRotation` 贪心逐轮：双打、不连休2轮硬约束（人数>8×场数时放宽）、公平/水平同质/固定搭档软；`POST/GET/DELETE /api/activities/:id/rotation`，池=签到到场者，入库可查）。
 
 仓库两部分：
 - `server/` — Express 后端（唯一运行时依赖 `express` + `qrcode`）。
@@ -76,6 +76,13 @@ openid → HMAC-SHA256 自签 token（无 JWT 依赖）。前端 `utils/request.
 - **详情页警告横幅**：`detail.rules.noShowBanDays` 生效时显示，文案按有无 `cancelDeadlineHours` 切换；`load()` 把 `d.rules` 下发。
 - 兼容：既有活动 `rules`（仅 `noShowBanDays`/`allowedLevels`）行为不变；前端级别 UI 从布尔开关改成三态 picker（关/指定水平/某级以上），`loadForEdit` 据有无 `minLevel`/`allowedLevels` 回填模式。
 - 同 Phase 4：缺席禁报要等原活动 `startTime` 过后才在新报名命中；缺席判定仍依赖 Phase 3 签到或本阶段的迟到取消。
+
+**Phase 5（轮转调度）的实现要点：**
+- **数据模型**：`activity.rotation = {courts, rounds, levelMode, fixedPairs, schedule, resting, generatedAt}`（覆盖式更新；`publicActivity` 透出）。`schedule` 是**生成时快照**（存当时的昵称/水平，后续资料变化不刷新；重新生成才更新）。
+- **算法** `generateRotation(players, {courts, rounds, levelMode, fixedPairs})` **纯函数**（无 store，TDD）：逐轮贪心——上一轮休息者本轮**必上场**（满足"不连休"硬约束；当**人数 > 8×场数**避不开时，按 `gamesPlayed` 最少取 `4×courts` 个、其余无奈连休，不报错）；剩余名额按"上场次数最少优先"补（公平，软）；分场：`homogeneous`=按 weight 连续切片（同质）/`balanced`=蛇形；固定搭档被切片切开时单遍交换归拢（软）。**连打不限**。`players < 4×courts` → 400（填不满）。
+- **端点**：`POST/GET/DELETE /api/activities/:id/rotation`。POST/DELETE 仅发起人（403 否则）；GET 公开（`optionalAuth`）。**池 = confirmed 且 `attended !== false`**（开赛后未签到者默认到场、已含；显式"缺"排除）——`setRotation` 里 reg 与 entry 配对过滤保对齐。
+- **前端**：详情页"水平分组"卡的模式 picker 加「轮转表」；输入场数/轮数/水平模式；固定搭档用"点1人→点1人配对"勾选（`rotFixed` 二维 + `rotFixedFlat` 平铺供 wxml 高亮）；生成后展示 R 轮×C 场表；可重新生成/清除。
+- **风险**：贪心非最优，极端人数/场数下公平或同质可能略不均，自用可接受；要更优后续上模拟退火（YAGNI）。
 
 ## 陷阱与非显而易见的事
 
