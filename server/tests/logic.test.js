@@ -655,6 +655,62 @@ test('enrichActivity defaults unmarked attendees to 到场 after start, 未签 b
   assert.equal((await logic.getActivity(store, past.id)).confirmed[0].attended, false);
 });
 
+test('generateRotation: structure + feasibility + no-2-rests (feasible) + fairness', () => {
+  const mk = (id, level) => ({ openid: id, nickname: id, level });
+  const ps = Array.from({ length: 16 }, (_, i) => mk('u' + i, ['新手', '初级', '中级', '高级'][i % 4]));
+  const res = logic.generateRotation(ps, { courts: 2, rounds: 4, levelMode: 'homogeneous', fixedPairs: [] });
+  assert.equal(res.schedule.length, 4);
+  res.schedule.forEach((round) => {
+    assert.equal(round.length, 2);
+    round.forEach((court) => assert.equal(court.length, 4));
+  });
+  const restRounds = {};
+  ps.forEach((p) => (restRounds[p.openid] = []));
+  res.resting.forEach((ids, r) => ids.forEach((id) => restRounds[id].push(r)));
+  Object.entries(restRounds).forEach(([id, rs]) => {
+    for (let i = 1; i < rs.length; i++) assert.ok(rs[i] !== rs[i - 1] + 1, id + ' rested 2 in a row');
+  });
+  const played = {};
+  res.schedule.forEach((round) => round.forEach((c) => c.forEach((p) => (played[p.openid] = (played[p.openid] || 0) + 1))));
+  const counts = Object.values(played);
+  assert.ok(Math.max(...counts) - Math.min(...counts) <= 1, 'unfair: ' + counts.join(','));
+});
+
+test('generateRotation: relaxes no-2-rests when infeasible (players > 8*courts)', () => {
+  const mk = (id) => ({ openid: id, nickname: id, level: '中级' });
+  const ps = Array.from({ length: 20 }, (_, i) => mk('u' + i));
+  const res = logic.generateRotation(ps, { courts: 1, rounds: 3, levelMode: 'homogeneous', fixedPairs: [] });
+  assert.equal(res.schedule.length, 3);
+  res.schedule.forEach((round) => {
+    assert.equal(round.length, 1);
+    assert.equal(round[0].length, 4);
+  });
+});
+
+test('generateRotation: 400 when too few players to fill courts', () => {
+  const ps = Array.from({ length: 5 }, (_, i) => ({ openid: 'u' + i, level: '中级' }));
+  assert.throws(() => logic.generateRotation(ps, { courts: 2, rounds: 2 }), (e) => e.statusCode === 400);
+});
+
+test('generateRotation: homogeneous tiers courts by level', () => {
+  const mk = (id, lv) => ({ openid: id, level: lv });
+  const ps = [mk('a', '高级'), mk('b', '高级'), mk('c', '中级'), mk('d', '中级'), mk('e', '初级'), mk('f', '初级'), mk('g', '新手'), mk('h', '新手')];
+  const w = (lv) => ({ 新手: 1, 初级: 2, 中级: 3, 高级: 4 }[lv]);
+  const hom = logic.generateRotation(ps, { courts: 2, rounds: 1, levelMode: 'homogeneous', fixedPairs: [] });
+  const top0 = Math.min(...hom.schedule[0][0].map((p) => w(p.level)));
+  const top1 = Math.max(...hom.schedule[0][1].map((p) => w(p.level)));
+  assert.ok(top0 >= top1, 'homogeneous should tier courts');
+});
+
+test('generateRotation: fixed pairs end up on the same court', () => {
+  const mk = (id) => ({ openid: id, level: '中级' });
+  const ps = Array.from({ length: 8 }, (_, i) => mk('u' + i));
+  const res = logic.generateRotation(ps, { courts: 2, rounds: 1, levelMode: 'homogeneous', fixedPairs: [['u0', 'u5']] });
+  const courtOf = {};
+  res.schedule[0].forEach((court, ci) => court.forEach((p) => (courtOf[p.openid] = ci)));
+  assert.equal(courtOf['u0'], courtOf['u5'], 'fixed pair reunited');
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

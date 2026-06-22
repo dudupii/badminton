@@ -92,6 +92,93 @@ function generateGroups(confirmed, { mode, count }) {
   return groups.filter((g) => g.length);
 }
 
+// Pick n from arr preferring those with the fewest games played (stable on tie).
+function pickFewestGames(arr, n, games) {
+  return arr
+    .slice()
+    .sort((a, b) => (games[a.openid] || 0) - (games[b.openid] || 0))
+    .slice(0, n);
+}
+
+// After level-based slicing, move split fixed-pair members back together (best-effort).
+function reunitePairs(groups, fixedPairs) {
+  const partner = {};
+  (fixedPairs || []).forEach(([a, b]) => {
+    partner[a] = b;
+    partner[b] = a;
+  });
+  for (const [A, B] of fixedPairs || []) {
+    const ci = groups.findIndex((g) => g.some((p) => p.openid === A));
+    const cj = groups.findIndex((g) => g.some((p) => p.openid === B));
+    if (ci === -1 || cj === -1 || ci === cj) continue;
+    const court = groups[cj];
+    let vi = court.findIndex((p) => p.openid !== B && !partner[p.openid]);
+    if (vi === -1) vi = court.findIndex((p) => p.openid !== B);
+    if (vi === -1) continue;
+    const ai = groups[ci].findIndex((p) => p.openid === A);
+    const tmp = groups[ci][ai];
+    groups[ci][ai] = court[vi];
+    court[vi] = tmp;
+  }
+}
+
+// Split the SLOTS playing players into C courts of 4 by level mode, reuniting pairs.
+function assignRotationCourts(players, courts, levelMode, fixedPairs) {
+  const sorted = players.slice().sort((a, b) => levelWeight(b.level) - levelWeight(a.level)); // desc
+  const groups = Array.from({ length: courts }, () => []);
+  if (levelMode === 'balanced') {
+    sorted.forEach((p, i) => {
+      const round = Math.floor(i / courts);
+      const idx = round % 2 === 0 ? i % courts : courts - 1 - (i % courts);
+      groups[idx].push(p);
+    });
+  } else {
+    sorted.forEach((p, i) => groups[Math.floor(i / 4)].push(p)); // homogeneous: contiguous
+  }
+  reunitePairs(groups, fixedPairs);
+  return groups;
+}
+
+// Greedy multi-round rotation. Doubles (4/court). Hard "no 2 consecutive rests"
+// when players <= 8*courts; relaxed (best-effort) otherwise. Fairness / level /
+// fixed-pairs are soft. Throws 400 if players can't fill the courts.
+function generateRotation(players, { courts, rounds, levelMode, fixedPairs }) {
+  const C = Math.max(1, Number(courts) || 1);
+  const R = Math.max(1, Number(rounds) || 1);
+  const slots = 4 * C;
+  if (!Array.isArray(players) || players.length < slots) {
+    throw httpError(400, '到场人数不足以填满场地（至少需 ' + slots + ' 人）');
+  }
+  const pool = players.map((p) => ({ ...p, weight: levelWeight(p.level) }));
+  const games = {};
+  const lastRest = {};
+  pool.forEach((p) => {
+    games[p.openid] = 0;
+    lastRest[p.openid] = false;
+  });
+  const schedule = [];
+  const resting = [];
+  for (let r = 0; r < R; r++) {
+    const prevResters = pool.filter((p) => lastRest[p.openid]);
+    const forced = prevResters.length <= slots ? prevResters.slice() : pickFewestGames(prevResters, slots, games);
+    const forcedSet = new Set(forced.map((p) => p.openid));
+    const others = pool.filter((p) => !forcedSet.has(p.openid));
+    const playing = forced.concat(pickFewestGames(others, slots - forced.length, games));
+    const playingSet = new Set(playing.map((p) => p.openid));
+    const resters = pool.filter((p) => !playingSet.has(p.openid));
+    schedule.push(assignRotationCourts(playing, C, levelMode, fixedPairs));
+    resting.push(resters.map((p) => p.openid));
+    playing.forEach((p) => {
+      games[p.openid]++;
+      lastRest[p.openid] = false;
+    });
+    resters.forEach((p) => {
+      lastRest[p.openid] = true;
+    });
+  }
+  return { schedule, resting };
+}
+
 function genCode(state, len = 6) {
   const existing = new Set(Object.values(state.activities).map((a) => a.code));
   for (let attempt = 0; attempt < 16; attempt++) {
@@ -721,4 +808,5 @@ module.exports = {
   myCreatedActivities,
   attendanceStats,
   generateGroups,
+  generateRotation,
 };
