@@ -37,6 +37,7 @@
       </view>
     </block>
     <view wx:else class="muted" style="padding:8rpx 0;">还没有人报名</view>
+    <button wx:if="{{detail.confirmed.length}}" class="btn btn-ghost" style="margin-top:12rpx;" bindtap="exportRoster">复制名单(文本)</button>
   </view>
 
   <!-- waitlist -->

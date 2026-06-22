@@ -330,6 +330,24 @@ Page({
       wx.showToast({ title: e.message, icon: 'none' });
     }
   },
+  // 复制报名名单(正式+候补)为纯文本到剪贴板——只有号码+名字，不含性别/水平。
+  exportRoster() {
+    const d = this.data.detail;
+    if (!d || !d.confirmed || !d.confirmed.length) {
+      return wx.showToast({ title: '暂无名单', icon: 'none' });
+    }
+    const lines = [(d.title || '活动') + ' · 报名名单'];
+    lines.push('正式名单 (' + d.confirmed.length + '/' + d.capacity + ')');
+    d.confirmed.forEach((p, i) => lines.push((i + 1) + '-' + (p.nickname || '')));
+    if (d.waitlist && d.waitlist.length) {
+      lines.push('候补 (' + d.waitlist.length + ')');
+      d.waitlist.forEach((p, i) => lines.push((i + 1) + '-' + (p.nickname || '')));
+    }
+    wx.setClipboardData({
+      data: lines.join('\n'),
+      success: () => wx.showToast({ title: '名单已复制到剪贴板', icon: 'none' }),
+    });
+  },
   async exportRotation() {
     const detail = this.data.detail;
     const rot = detail && detail.rotation;
