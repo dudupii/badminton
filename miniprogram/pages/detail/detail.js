@@ -29,6 +29,7 @@ Page({
     rotFixed: [], // [[openid,openid],…]
     rotFixedFlat: [], // openids that are in some fixed pair (for wxml highlight)
     rotPairPick: null, // openid of first half-picked pair, or null
+    rotMatchFormat: 'any', // any|mens|womens|mixed
   },
 
   onLoad(q) {
@@ -299,6 +300,7 @@ Page({
         courts: d.rotCourts,
         rounds: d.rotRounds,
         levelMode: d.rotLevelMode,
+        matchFormat: d.rotMatchFormat,
         fixedPairs: d.rotFixed,
       });
       // r is the activity object (with rotation); pull rotation into detail
@@ -320,6 +322,9 @@ Page({
   onRotRounds(e) { this.setData({ rotRounds: e.detail.value }); },
   onRotRoundsBlur(e) { let v = parseInt(e.detail.value, 10); this.setData({ rotRounds: isNaN(v) || v < 1 ? 1 : v }); },
   onRotLevelMode(e) { this.setData({ rotLevelMode: Number(e.detail.value) === 1 ? 'balanced' : 'homogeneous' }); },
+  onRotMatchFormat(e) {
+    this.setData({ rotMatchFormat: ['any', 'mens', 'womens', 'mixed'][Number(e.detail.value)] || 'any' });
+  },
   // Tap to form pairs: tap 1st → tap 2nd → pair; tap an already-paired player → remove that pair
   toggleRotPair(e) {
     const oid = e.currentTarget.dataset.openid;

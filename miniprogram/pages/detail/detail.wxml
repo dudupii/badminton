@@ -123,6 +123,12 @@
           <view class="input" style="flex:1;">{{rotLevelMode==='balanced'?'均衡(强弱搭)':'同质(相近同场)'}}</view>
         </picker>
       </view>
+      <view class="row" style="margin-top:12rpx;align-items:center;">
+        <text class="muted" style="width:140rpx;">赛制</text>
+        <picker bindchange="onRotMatchFormat" value="{{rotMatchFormat==='mens'?1:rotMatchFormat==='womens'?2:rotMatchFormat==='mixed'?3:0}}" range="{{['不限','男双','女双','混双']}}">
+          <view class="input" style="flex:1;">{{rotMatchFormat==='mens'?'男双':rotMatchFormat==='womens'?'女双':rotMatchFormat==='mixed'?'混双':'不限'}}</view>
+        </picker>
+      </view>
 
       <view class="muted" style="margin-top:16rpx;font-size:24rpx;">固定搭档（可选）：点一人、再点另一人配对；点已配对人解除</view>
       <view class="row" style="margin-top:8rpx;flex-wrap:wrap;">
