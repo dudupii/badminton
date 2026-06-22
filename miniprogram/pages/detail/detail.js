@@ -30,6 +30,7 @@ Page({
     rotFixedFlat: [], // openids that are in some fixed pair (for wxml highlight)
     rotPairPick: null, // openid of first half-picked pair, or null
     rotMatchFormat: 'any', // any|mens|womens|mixed
+    rotCurrentRound: 0,
     sessCourts: 3,
     sessLevelMode: 'homogeneous',
     sessMatchFormat: 'any',
@@ -119,6 +120,7 @@ Page({
         myFee: (d.confirmed || []).find((x) => x.openid === me) || null,
         rules: d.rules,
         sessStarted: !!(d.session && d.session.currentRound > 0),
+        rotCurrentRound: d.rotation ? (d.rotation.currentRound || 0) : 0,
       });
     } catch (e) {
       this.setData({ loading: false });
@@ -276,8 +278,7 @@ Page({
   },
 
   onGroupModeChange(e) {
-    const idx = Number(e.detail.value);
-    this.setData({ groupMode: ['groups', 'pairs', 'rotation', 'session'][idx] || 'groups' });
+    this.setData({ groupMode: Number(e.detail.value) === 1 ? 'session' : 'rotation' });
   },
   onGroupCount(e) {
     this.setData({ groupCount: e.detail.value }); // free typing while focused
@@ -377,6 +378,28 @@ Page({
       data: lines.join('\n'),
       success: () => wx.showToast({ title: '轮转表已复制到剪贴板', icon: 'none' }),
     });
+  },
+  async setRotCurrentRound(r) {
+    const d = this.data;
+    try {
+      const res = await request('POST', '/api/activities/' + d.id + '/rotation/current', { round: r });
+      this.setData({ detail: { ...d.detail, rotation: this._injectRotationNo(res.rotation, d.detail.confirmed) }, rotCurrentRound: r });
+    } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
+  },
+  rotPrev() { const r = Math.max(0, this.data.rotCurrentRound - 1); this.setRotCurrentRound(r); },
+  rotNext() { const max = ((this.data.detail.rotation && this.data.detail.rotation.schedule && this.data.detail.rotation.schedule.length) || 1) - 1; const r = Math.min(max, this.data.rotCurrentRound + 1); this.setRotCurrentRound(r); },
+  copyOneRound(e) {
+    const ri = e.currentTarget.dataset.ri;
+    const rot = this.data.detail.rotation;
+    if (!rot || !rot.schedule[ri]) return;
+    const noMap = {}; (this.data.detail.confirmed || []).forEach((x, i) => { noMap[x.openid] = i + 1; });
+    const label = (p) => (p.no || noMap[p.openid] || '?') + '-' + (p.nickname || '');
+    const rd = rot.schedule[ri];
+    const lines = ['第' + (ri + 1) + '轮' + (ri === this.data.rotCurrentRound ? ' ▶当前' : '')];
+    rd.forEach((c, ci) => lines.push('场' + (ci + 1) + ': ' + c.map(label).join(' / ')));
+    const restLabel = (oid) => (noMap[oid] || '?') + '-' + (((this.data.detail.confirmed || []).find((x) => x.openid === oid)) || {}).nickname || oid;
+    lines.push('休息: ' + (rot.resting[ri] || []).map(restLabel).join('、'));
+    wx.setClipboardData({ data: lines.join('\n'), success: () => wx.showToast({ title: '第' + (ri + 1) + '轮已复制', icon: 'none' }) });
   },
   async startSession() {
     const d = this.data;

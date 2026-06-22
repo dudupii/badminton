@@ -91,23 +91,10 @@
     <view class="section-title">水平分组</view>
     <view class="row" style="margin-top:12rpx;align-items:center;">
       <text class="muted" style="width:140rpx;">模式</text>
-      <picker bindchange="onGroupModeChange" value="{{groupMode==='pairs'?1:groupMode==='rotation'?2:groupMode==='session'?3:0}}" range="{{['分N组(场地)','双打搭档','轮转表','逐轮(动态)']}}">
-        <view class="input" style="flex:1;">{{groupMode==='session'?'逐轮(动态)':groupMode==='rotation'?'轮转表':groupMode==='pairs'?'双打搭档':'分N组(场地)'}}</view>
+      <picker bindchange="onGroupModeChange" value="{{groupMode==='session'?1:0}}" range="{{['轮转表','逐轮(动态)']}}">
+        <view class="input" style="flex:1;">{{groupMode==='session'?'逐轮(动态)':'轮转表'}}</view>
       </picker>
     </view>
-    <view class="row" wx:if="{{groupMode==='groups'}}" style="margin-top:12rpx;align-items:center;">
-      <text class="muted" style="width:140rpx;">组数</text>
-      <input class="input" style="flex:1;" type="number" value="{{groupCount}}" bindinput="onGroupCount" bindblur="onGroupCountBlur" />
-    </view>
-    <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="genGroups">生成</button>
-    <block wx:if="{{grouping}}">
-      <view wx:for="{{grouping.groups}}" wx:for-item="grp" wx:key="id" style="margin-top:16rpx;">
-        <view class="muted" style="font-weight:600;">{{grouping.mode==='pairs' ? (grp.members.length===1 ? '落单' : '搭档') : '组'}} {{index+1}}</view>
-        <view wx:for="{{grp.members}}" wx:for-item="p" wx:key="openid" style="padding:4rpx 0;">
-          {{p.no}}-{{p.nickname}}（{{p.level||'未填'}}）
-        </view>
-      </view>
-    </block>
 
     <block wx:if="{{groupMode === 'rotation'}}">
       <view class="row" style="margin-top:12rpx;align-items:center;">
@@ -143,10 +130,29 @@
       <button wx:if="{{detail.rotation}}" class="btn btn-ghost" style="margin-top:12rpx;" bindtap="exportRotation">复制轮转表(文本)</button>
 
       <block wx:if="{{detail.rotation}}">
-        <view wx:for="{{detail.rotation.schedule}}" wx:for-item="round" wx:key="*this" style="margin-top:16rpx;">
-          <view class="muted" style="font-weight:600;">第 {{index+1}} 轮</view>
-          <view wx:for="{{round}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="padding:4rpx 0;">
-            <text class="muted">场{{ci+1}}：</text>{{court[0].no}}-{{court[0].nickname}}{{court[1] ? ' / ' + court[1].no + '-' + court[1].nickname : ''}}{{court[2] ? ' / ' + court[2].no + '-' + court[2].nickname : ''}}{{court[3] ? ' / ' + court[3].no + '-' + court[3].nickname : ''}}
+        <!-- 刷新提示 -->
+        <view wx:if="{{detail.confirmed.length !== detail.rotation.headcount}}" class="muted" style="margin-top:8rpx;color:#b45309;font-size:22rpx;">⚠ 名单有变动，建议重新生成</view>
+        <!-- 当前轮导航 -->
+        <view class="row between" style="margin-top:12rpx;">
+          <button class="btn btn-ghost" style="padding:8rpx 24rpx;" bindtap="rotPrev">◀</button>
+          <text style="font-size:32rpx;font-weight:bold;">第 {{rotCurrentRound + 1}} 轮</text>
+          <button class="btn btn-ghost" style="padding:8rpx 24rpx;" bindtap="rotNext">▶</button>
+        </view>
+        <!-- 当前轮大字卡片 -->
+        <view wx:for="{{detail.rotation.schedule[rotCurrentRound]}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="background:#16a34a;border-radius:12rpx;padding:20rpx;margin-top:12rpx;">
+          <text style="color:#fff;font-size:28rpx;font-weight:bold;">场{{ci+1}}</text>
+          <text style="color:#fff;font-size:30rpx;margin-left:16rpx;">{{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
+        </view>
+        <view class="muted" style="margin-top:8rpx;font-size:24rpx;">休息: {{detail.rotation.resting[rotCurrentRound].length}} 人</view>
+        <button class="btn btn-ghost" style="margin-top:8rpx;font-size:24rpx;" data-ri="{{rotCurrentRound}}" bindtap="copyOneRound">复制本轮</button>
+        <!-- 全部轮次（当前高亮，其余灰显） -->
+        <view wx:for="{{detail.rotation.schedule}}" wx:for-item="round" wx:key="*this" style="margin-top:12rpx;{{index === rotCurrentRound ? 'opacity:1;' : 'opacity:0.4;'}}">
+          <view class="row between">
+            <text class="muted" style="font-weight:600;">第 {{index + 1}} 轮{{index === rotCurrentRound ? ' ▶' : ''}}</text>
+            <text class="muted" style="font-size:22rpx;" data-ri="{{index}}" bindtap="copyOneRound">复制</text>
+          </view>
+          <view wx:for="{{round}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="padding:2rpx 0;">
+            <text class="muted" style="font-size:24rpx;">场{{ci+1}}：</text><text style="font-size:24rpx;">{{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
           </view>
         </view>
       </block>
