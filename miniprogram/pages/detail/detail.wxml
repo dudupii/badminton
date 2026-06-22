@@ -49,6 +49,7 @@
       <view wx:else class="avatar avatar-fallback">{{item.nickname ? item.nickname[0] : '?'}}</view>
       <text class="roster-name">{{item.no}}-{{item.nickname}}</text>
       <text class="muted">候补</text>
+    </view>
   </view>
 
   <!-- 费用 AA（仅发起人） -->
