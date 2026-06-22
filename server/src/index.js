@@ -300,6 +300,8 @@ app.delete(
   requireAuth,
   wrap(async (req) => logic.clearRotation(store, req.params.id, req.user.openid))
 );
+app.post('/api/activities/:id/rotation/current', requireAuth,
+  wrap(async (req) => logic.setCurrentRound(store, req.params.id, req.user.openid, req.body && req.body.round)));
 
 app.post(
   '/api/activities/:id/session/start',
@@ -311,6 +313,10 @@ app.post(
   requireAuth,
   wrap(async (req) => logic.assignSession(store, req.params.id, req.user.openid, req.body || {}))
 );
+app.post('/api/activities/:id/session/undo', requireAuth,
+  wrap(async (req) => logic.undoSession(store, req.params.id, req.user.openid)));
+app.post('/api/activities/:id/session/courts', requireAuth,
+  wrap(async (req) => logic.setSessionCourts(store, req.params.id, req.user.openid, req.body && req.body.courts)));
 app.get(
   '/api/activities/:id/session',
   optionalAuth,

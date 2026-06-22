@@ -615,6 +615,7 @@ async function setRotation(store, id, actorOpenid, params) {
       schedule,
       resting,
       generatedAt: Date.now(),
+      headcount: pool.length,
     };
     return publicActivity(a);
   });
@@ -669,6 +670,14 @@ async function assignSession(store, id, actorOpenid, { present }) {
     }
     const presentSet = new Set(present || []);
     const presentPlayers = confirmed.filter((p) => presentSet.has(p.openid));
+    // Initialize games/lastRest defaults for all confirmed players (idempotent)
+    // so the undo snapshot captures a meaningful pre-round state (0 / false).
+    for (const p of confirmed) {
+      if (a.session.games[p.openid] == null) a.session.games[p.openid] = 0;
+      if (a.session.lastRest[p.openid] == null) a.session.lastRest[p.openid] = false;
+    }
+    const beforeGames = Object.assign({}, a.session.games);
+    const beforeLastRest = Object.assign({}, a.session.lastRest);
     const { courts, resting, games, lastRest } = assignOneRound(presentPlayers, {
       courts: a.session.courts,
       levelMode: a.session.levelMode,
@@ -676,7 +685,7 @@ async function assignSession(store, id, actorOpenid, { present }) {
       games: a.session.games,
       lastRest: a.session.lastRest,
     });
-    const round = { courts, resting, present: present || [] };
+    const round = { courts, resting, present: present || [], before: { games: beforeGames, lastRest: beforeLastRest } };
     a.session.rounds.push(round);
     a.session.currentRound += 1;
     a.session.games = games;
@@ -692,6 +701,47 @@ async function clearSession(store, id, actorOpenid) {
     if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
     a.session = null;
     return { cleared: true };
+  });
+}
+
+async function setCurrentRound(store, id, actorOpenid, round) {
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    if (!a.rotation) throw httpError(400, '请先生成轮转表');
+    const max = a.rotation.schedule.length - 1;
+    a.rotation.currentRound = Math.max(0, Math.min(Number(round) || 0, max));
+    return publicActivity(a);
+  });
+}
+
+async function undoSession(store, id, actorOpenid) {
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    if (!a.session || a.session.rounds.length === 0) throw httpError(400, '没有可撤销的轮次');
+    const popped = a.session.rounds.pop();
+    a.session.currentRound = Math.max(0, a.session.currentRound - 1);
+    if (popped.before) {
+      a.session.games = popped.before.games;
+      a.session.lastRest = popped.before.lastRest;
+    }
+    return { session: publicActivity(a).session };
+  });
+}
+
+async function setSessionCourts(store, id, actorOpenid, courts) {
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    if (!a.session) throw httpError(400, '请先开始会话');
+    const c = Number(courts);
+    if (!Number.isInteger(c) || c < 1) throw httpError(400, '场地数需为正整数');
+    a.session.courts = c;
+    return publicActivity(a);
   });
 }
 
@@ -967,4 +1017,7 @@ module.exports = {
   startSession,
   assignSession,
   clearSession,
+  setCurrentRound,
+  undoSession,
+  setSessionCourts,
 };

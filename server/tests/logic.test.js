@@ -829,6 +829,29 @@ test('session: start + assign + clear; creator only; pool = confirmed', async ()
   await withError(403, logic.clearSession(store, act.id, 'stranger'));
 });
 
+test('setCurrentRound + undoSession + setSessionCourts', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 20 }, 'org');
+  for (let i = 0; i < 16; i++) await logic.register(store, act.id, 'u' + i, 1000 + i);
+  await logic.setRotation(store, act.id, 'org', { courts: 2, rounds: 3, levelMode: 'homogeneous', fixedPairs: [] });
+  const cr = await logic.setCurrentRound(store, act.id, 'org', 1);
+  assert.equal(cr.rotation.currentRound, 1);
+  await withError(403, logic.setCurrentRound(store, act.id, 'stranger', 0));
+  await logic.startSession(store, act.id, 'org', { courts: 2, levelMode: 'homogeneous', matchFormat: 'any' });
+  const present = Array.from({ length: 16 }, (_, i) => 'u' + i);
+  await logic.assignSession(store, act.id, 'org', { present });
+  assert.equal((await logic.getActivity(store, act.id)).session.currentRound, 1);
+  const undone = await logic.undoSession(store, act.id, 'org');
+  assert.equal(undone.session.currentRound, 0);
+  assert.equal(undone.session.rounds.length, 0);
+  assert.equal(undone.session.games['u0'], 0);
+  await withError(400, logic.undoSession(store, act.id, 'org'));
+  await withError(403, logic.undoSession(store, act.id, 'stranger'));
+  const sc = await logic.setSessionCourts(store, act.id, 'org', 3);
+  assert.equal(sc.session.courts, 3);
+  await withError(403, logic.setSessionCourts(store, act.id, 'stranger', 2));
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.
