@@ -778,6 +778,30 @@ test('setRotation persists matchFormat + pool carries gender', async () => {
   assert.equal(r2.rotation.matchFormat, 'any');
 });
 
+test('assignOneRound: selects + assigns one round, updates games/lastRest', () => {
+  const mk = (id, lv) => ({ openid: id, nickname: id, level: lv });
+  const ps = []; for (let i = 0; i < 16; i++) ps.push(mk('u' + i, ['新手','初级','中级','高级'][i % 4]));
+  const games = {}; ps.forEach((p) => (games[p.openid] = 0));
+  const lastRest = {}; ps.forEach((p) => (lastRest[p.openid] = false));
+  const r = logic.assignOneRound(ps, { courts: 2, levelMode: 'homogeneous', matchFormat: 'any', games, lastRest });
+  assert.equal(r.courts.length, 2);
+  r.courts.forEach((c) => assert.equal(c.length, 4));
+  assert.equal(r.resting.length, 8);
+  r.courts.flat().forEach((p) => assert.equal(r.games[p.openid], 1));
+  r.resting.forEach((id) => assert.equal(r.lastRest[id], true));
+  assert.throws(() => logic.assignOneRound(ps.slice(0, 5), { courts: 2, levelMode: 'homogeneous', matchFormat: 'any', games, lastRest }), (e) => e.statusCode === 400);
+});
+
+test('assignOneRound: no-consecutive-rest (forced from lastRest)', () => {
+  const mk = (id) => ({ openid: id, nickname: id, level: '中级' });
+  const ps = []; for (let i = 0; i < 16; i++) ps.push(mk('u' + i));
+  const games = {}; ps.forEach((p) => (games[p.openid] = 0));
+  const lastRest = {}; ps.forEach((p) => (lastRest[p.openid] = false));
+  for (let i = 0; i < 8; i++) lastRest['u' + i] = true;
+  const r = logic.assignOneRound(ps, { courts: 2, levelMode: 'homogeneous', matchFormat: 'any', games, lastRest });
+  r.resting.forEach((id) => assert.ok(Number(id.slice(1)) >= 8, 'previous rester not resting again: ' + id));
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

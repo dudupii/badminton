@@ -167,6 +167,32 @@ function assignRotationCourts(players, courts, levelMode, fixedPairs, matchForma
   return groups;
 }
 
+// Assign ONE round of courts from the present players. Pure: takes games/lastRest
+// state, returns updated state. Throws 400 if present < 4*courts.
+function assignOneRound(presentPlayers, { courts, levelMode, matchFormat, fixedPairs, games, lastRest }) {
+  const C = Math.max(1, Number(courts) || 1);
+  const slots = 4 * C;
+  if (!Array.isArray(presentPlayers) || presentPlayers.length < slots) {
+    throw httpError(400, '在场人数不足以填满场地（至少需 ' + slots + ' 人）');
+  }
+  const pool = presentPlayers.map((p) => ({ ...p, weight: levelWeight(p.level) }));
+  pool.forEach((p) => {
+    if (games[p.openid] == null) games[p.openid] = 0;
+    if (lastRest[p.openid] == null) lastRest[p.openid] = false;
+  });
+  const prevResters = pool.filter((p) => lastRest[p.openid]);
+  const forced = prevResters.length <= slots ? prevResters.slice() : pickFewestGames(prevResters, slots, games);
+  const forcedSet = new Set(forced.map((p) => p.openid));
+  const others = pool.filter((p) => !forcedSet.has(p.openid));
+  const playing = forced.concat(pickFewestGames(others, slots - forced.length, games));
+  const playingSet = new Set(playing.map((p) => p.openid));
+  const resters = pool.filter((p) => !playingSet.has(p.openid));
+  const courtsArr = assignRotationCourts(playing, C, levelMode, fixedPairs || null, matchFormat);
+  playing.forEach((p) => { games[p.openid]++; lastRest[p.openid] = false; });
+  resters.forEach((p) => { lastRest[p.openid] = true; });
+  return { courts: courtsArr, resting: resters.map((p) => p.openid), games, lastRest };
+}
+
 // Greedy multi-round rotation. Doubles (4/court). Hard "no 2 consecutive rests"
 // when players <= 8*courts; relaxed (best-effort) otherwise. Fairness / level /
 // fixed-pairs are soft. Throws 400 if players can't fill the courts.
@@ -180,29 +206,13 @@ function generateRotation(players, { courts, rounds, levelMode, fixedPairs, matc
   const pool = players.map((p) => ({ ...p, weight: levelWeight(p.level) }));
   const games = {};
   const lastRest = {};
-  pool.forEach((p) => {
-    games[p.openid] = 0;
-    lastRest[p.openid] = false;
-  });
+  pool.forEach((p) => { games[p.openid] = 0; lastRest[p.openid] = false; });
   const schedule = [];
   const resting = [];
   for (let r = 0; r < R; r++) {
-    const prevResters = pool.filter((p) => lastRest[p.openid]);
-    const forced = prevResters.length <= slots ? prevResters.slice() : pickFewestGames(prevResters, slots, games);
-    const forcedSet = new Set(forced.map((p) => p.openid));
-    const others = pool.filter((p) => !forcedSet.has(p.openid));
-    const playing = forced.concat(pickFewestGames(others, slots - forced.length, games));
-    const playingSet = new Set(playing.map((p) => p.openid));
-    const resters = pool.filter((p) => !playingSet.has(p.openid));
-    schedule.push(assignRotationCourts(playing, C, levelMode, fixedPairs, matchFormat));
-    resting.push(resters.map((p) => p.openid));
-    playing.forEach((p) => {
-      games[p.openid]++;
-      lastRest[p.openid] = false;
-    });
-    resters.forEach((p) => {
-      lastRest[p.openid] = true;
-    });
+    const res = assignOneRound(pool, { courts: C, levelMode, matchFormat, fixedPairs, games, lastRest });
+    schedule.push(res.courts);
+    resting.push(res.resting);
   }
   return { schedule, resting };
 }
@@ -881,6 +891,7 @@ module.exports = {
   myCreatedActivities,
   attendanceStats,
   generateGroups,
+  assignOneRound,
   generateRotation,
   setRotation,
   clearRotation,
