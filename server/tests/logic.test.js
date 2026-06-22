@@ -635,6 +635,26 @@ test('late cancel (past cancelDeadline) marks attended=false and feeds the no-sh
   assert.equal(store.snapshot().registrations.find((r) => r.openid === 'u3').attended, undefined);
 });
 
+test('enrichActivity defaults unmarked attendees to 到场 after start, 未签 before', async () => {
+  const store = tmpStore();
+  // future activity: unmarked → 未签 (null)
+  const fut = await logic.createActivity(store, { title: 'fut', startTime: '2099-01-01T10:00:00', capacity: 4 }, 'org');
+  await logic.register(store, fut.id, 'u1', 1000);
+  assert.equal((await logic.getActivity(store, fut.id)).confirmed[0].attended, null);
+
+  // past activity: can't register via API (past), so seed a confirmed reg directly
+  const past = await logic.createActivity(store, { title: 'past', startTime: '2000-01-01T10:00:00', capacity: 4 }, 'org');
+  await store.txn((state) => {
+    state.registrations.push({ id: 'r1', activityId: past.id, openid: 'u2', status: 'confirmed', createdAt: 1, cancelledAt: null });
+  });
+  assert.equal((await logic.getActivity(store, past.id)).confirmed[0].attended, true); // default 到场
+  // explicit 缺 (false) still respected
+  await store.txn((state) => {
+    state.registrations.find((r) => r.id === 'r1').attended = false;
+  });
+  assert.equal((await logic.getActivity(store, past.id)).confirmed[0].attended, false);
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

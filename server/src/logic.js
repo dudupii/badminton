@@ -302,6 +302,10 @@ function enrichActivity(state, a, viewerOpenid) {
     .filter((r) => r.activityId === a.id && r.status !== 'cancelled')
     .sort((x, y) => x.createdAt - y.createdAt || (x.id < y.id ? -1 : 1));
 
+  // After the activity has started, an unmarked attendee defaults to "到场"
+  // (the organizer only marks absentees). Before start, unmarked = "未签".
+  const isPast = !!(a.startTime && a.startTime <= Date.now());
+
   const confirmed = [];
   const waitlist = [];
   for (const r of regs) {
@@ -313,7 +317,7 @@ function enrichActivity(state, a, viewerOpenid) {
       level: u.level || '',
       gender: u.gender || '',
       paid: !!r.paid,
-      attended: r.attended === undefined ? null : r.attended,
+      attended: r.attended === true ? true : r.attended === false ? false : (isPast ? true : null),
       createdAt: r.createdAt,
     };
     (confirmed.length < a.capacity ? confirmed : waitlist).push(entry);

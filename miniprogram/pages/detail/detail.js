@@ -229,7 +229,9 @@ Page({
   },
   async toggleAttend(e) {
     const { openid, attended } = e.currentTarget.dataset;
-    const next = attended === true ? null : true; // 未到/未签 → 到；到 → 清除
+    // 3-state cycle: 到(true) → 缺(false) → 未签/clear(null) → 到…
+    // (post-start, unmarked shows as 到 by default, so tapping marks 缺)
+    const next = attended === true ? false : attended === false ? null : true;
     try {
       await request('POST', '/api/activities/' + this.data.id + '/roster/' + openid + '/attend', { attended: next });
       this.load();
