@@ -96,7 +96,7 @@
     </view>
     <view class="row" wx:if="{{groupMode==='groups'}}" style="margin-top:12rpx;align-items:center;">
       <text class="muted" style="width:140rpx;">组数</text>
-      <input class="input" style="flex:1;" type="number" value="{{groupCount}}" bindinput="onGroupCount" />
+      <input class="input" style="flex:1;" type="number" value="{{groupCount}}" bindinput="onGroupCount" bindblur="onGroupCountBlur" />
     </view>
     <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="genGroups">生成</button>
     <block wx:if="{{grouping}}">

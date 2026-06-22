@@ -262,6 +262,9 @@ Page({
     this.setData({ groupMode: e.detail.value === 1 ? 'pairs' : 'groups' });
   },
   onGroupCount(e) {
+    this.setData({ groupCount: e.detail.value }); // free typing while focused
+  },
+  onGroupCountBlur(e) {
     let v = parseInt(e.detail.value, 10);
     if (isNaN(v) || v < 1) v = 1;
     if (v > 20) v = 20;
