@@ -191,10 +191,10 @@ Page({
   },
 
   onFeeModeChange(e) {
-    this.setData({ 'feeEdit.mode': e.detail.value === 1 ? 'fixed' : 'total' });
+    this.setData({ 'feeEdit.mode': Number(e.detail.value) === 1 ? 'fixed' : 'total' });
   },
   onFeeSplitChange(e) {
-    this.setData({ 'feeEdit.splitBy': e.detail.value === 1 ? 'attended' : 'confirmed' });
+    this.setData({ 'feeEdit.splitBy': Number(e.detail.value) === 1 ? 'attended' : 'confirmed' });
   },
   onFeeAmount(e) {
     this.setData({ 'feeEdit.amount': e.detail.value });
@@ -261,7 +261,7 @@ Page({
   },
 
   onGroupModeChange(e) {
-    this.setData({ groupMode: e.detail.value === 1 ? 'pairs' : 'groups' });
+    this.setData({ groupMode: Number(e.detail.value) === 1 ? 'pairs' : 'groups' });
   },
   onGroupCount(e) {
     this.setData({ groupCount: e.detail.value }); // free typing while focused
