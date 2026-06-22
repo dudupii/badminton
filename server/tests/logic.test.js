@@ -802,6 +802,33 @@ test('assignOneRound: no-consecutive-rest (forced from lastRest)', () => {
   r.resting.forEach((id) => assert.ok(Number(id.slice(1)) >= 8, 'previous rester not resting again: ' + id));
 });
 
+test('session: start + assign + clear; creator only; pool = confirmed', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 20 }, 'org');
+  for (let i = 0; i < 16; i++) {
+    await logic.register(store, act.id, 'u' + i, 1000 + i);
+    await logic.updateProfile(store, 'u' + i, { level: ['新手','初级','中级','高级'][i % 4], gender: i % 2 === 0 ? '男' : '女' });
+  }
+  await withError(403, logic.startSession(store, act.id, 'stranger', { courts: 2, levelMode: 'homogeneous', matchFormat: 'any' }));
+  const s = await logic.startSession(store, act.id, 'org', { courts: 2, levelMode: 'homogeneous', matchFormat: 'any' });
+  assert.equal(s.session.currentRound, 0);
+  assert.equal(s.session.rounds.length, 0);
+  const present = Array.from({ length: 16 }, (_, i) => 'u' + i);
+  const r0 = await logic.assignSession(store, act.id, 'org', { present });
+  assert.equal(r0.round.courts.length, 2);
+  assert.equal(r0.session.currentRound, 1);
+  // late arrival: round 1 only 12 present (u0..u3 "late")
+  const present1 = Array.from({ length: 12 }, (_, i) => 'u' + (i + 4));
+  const r1 = await logic.assignSession(store, act.id, 'org', { present: present1 });
+  assert.equal(r1.round.courts.length, 2);
+  assert.equal(r1.session.currentRound, 2);
+  assert.equal(r1.session.games['u0'], 1); // u0 played round 0 but not round 1
+  await withError(400, logic.assignSession(store, act.id, 'org', { present: ['u0', 'u1'] }));
+  await logic.clearSession(store, act.id, 'org');
+  assert.equal((await logic.getActivity(store, act.id)).session, null);
+  await withError(403, logic.clearSession(store, act.id, 'stranger'));
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

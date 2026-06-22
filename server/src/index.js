@@ -301,6 +301,30 @@ app.delete(
   wrap(async (req) => logic.clearRotation(store, req.params.id, req.user.openid))
 );
 
+app.post(
+  '/api/activities/:id/session/start',
+  requireAuth,
+  wrap(async (req) => logic.startSession(store, req.params.id, req.user.openid, req.body || {}))
+);
+app.post(
+  '/api/activities/:id/session/assign',
+  requireAuth,
+  wrap(async (req) => logic.assignSession(store, req.params.id, req.user.openid, req.body || {}))
+);
+app.get(
+  '/api/activities/:id/session',
+  optionalAuth,
+  wrap(async (req) => {
+    const d = await logic.getActivity(store, req.params.id, req.user && req.user.openid);
+    return d.session || null;
+  })
+);
+app.delete(
+  '/api/activities/:id/session',
+  requireAuth,
+  wrap(async (req) => logic.clearSession(store, req.params.id, req.user.openid))
+);
+
 // --- registrations ----------------------------------------------------------
 app.post(
   '/api/activities/:id/register',

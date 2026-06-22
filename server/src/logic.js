@@ -257,6 +257,7 @@ function publicActivity(a) {
     fee: a.fee || null,
     rules: a.rules || null,
     rotation: a.rotation || null,
+    session: a.session || null,
   };
 }
 
@@ -626,6 +627,71 @@ async function clearRotation(store, id, actorOpenid) {
   });
 }
 
+// Dynamic per-round court assignment. startSession initializes the session
+// state, assignSession runs one round (mutating session.games/lastRest across
+// rounds via the same object references), clearSession wipes it. Creator only.
+async function startSession(store, id, actorOpenid, params) {
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    a.session = {
+      courts: Number(params.courts) || 1,
+      levelMode: params.levelMode === 'balanced' ? 'balanced' : 'homogeneous',
+      matchFormat: ['mens', 'womens', 'mixed'].includes(params.matchFormat) ? params.matchFormat : 'any',
+      currentRound: 0,
+      rounds: [],
+      games: {},
+      lastRest: {},
+      startedAt: Date.now(),
+    };
+    return publicActivity(a);
+  });
+}
+
+async function assignSession(store, id, actorOpenid, { present }) {
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    if (!a.session) throw httpError(400, '请先开始会话');
+    const regs = state.registrations
+      .filter((r) => r.activityId === id && r.status !== 'cancelled')
+      .sort((x, y) => x.createdAt - y.createdAt || (x.id < y.id ? -1 : 1));
+    const confirmed = [];
+    for (const r of regs) {
+      if (confirmed.length >= a.capacity) break;
+      const u = state.users[r.openid] || { openid: r.openid, nickname: '未知球友', level: '', gender: '' };
+      confirmed.push({ openid: r.openid, nickname: u.nickname, level: u.level || '', gender: u.gender || '' });
+    }
+    const presentSet = new Set(present || []);
+    const presentPlayers = confirmed.filter((p) => presentSet.has(p.openid));
+    const { courts, resting, games, lastRest } = assignOneRound(presentPlayers, {
+      courts: a.session.courts,
+      levelMode: a.session.levelMode,
+      matchFormat: a.session.matchFormat,
+      games: a.session.games,
+      lastRest: a.session.lastRest,
+    });
+    const round = { courts, resting, present: present || [] };
+    a.session.rounds.push(round);
+    a.session.currentRound += 1;
+    a.session.games = games;
+    a.session.lastRest = lastRest;
+    return { round, session: publicActivity(a).session };
+  });
+}
+
+async function clearSession(store, id, actorOpenid) {
+  return store.txn((state) => {
+    const a = state.activities[id];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    a.session = null;
+    return { cleared: true };
+  });
+}
+
 // Mark a registrant paid/unpaid. Organizer only. Returns the updated slice.
 async function markPaid(store, activityId, actorOpenid, targetOpenid, paid) {
   return store.txn((state) => {
@@ -895,4 +961,7 @@ module.exports = {
   generateRotation,
   setRotation,
   clearRotation,
+  startSession,
+  assignSession,
+  clearSession,
 };
