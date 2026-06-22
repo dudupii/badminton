@@ -763,6 +763,21 @@ test('generateRotation: matchFormat falls back to level-based when gender insuff
   r.schedule[0].forEach((c) => assert.ok(c.some((p) => p.gender === '男'), 'each court has a man (no forced womens court)'));
 });
 
+test('setRotation persists matchFormat + pool carries gender', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 20 }, 'org');
+  for (let i = 0; i < 16; i++) {
+    await logic.register(store, act.id, 'u' + i, 1000 + i);
+    await logic.updateProfile(store, 'u' + i, { gender: i % 2 === 0 ? '男' : '女', level: '中级' });
+  }
+  const r = await logic.setRotation(store, act.id, 'org', { courts: 4, rounds: 1, levelMode: 'homogeneous', fixedPairs: [], matchFormat: 'womens' });
+  assert.equal(r.rotation.matchFormat, 'womens');
+  const c0 = r.rotation.schedule[0][0];
+  assert.equal(c0.filter((p) => p.gender === '女').length, 4, 'womens court formed from persisted pool');
+  const r2 = await logic.setRotation(store, act.id, 'org', { courts: 4, rounds: 1, levelMode: 'homogeneous' });
+  assert.equal(r2.rotation.matchFormat, 'any');
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

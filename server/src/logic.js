@@ -587,7 +587,7 @@ async function setRotation(store, id, actorOpenid, params) {
     for (const r of regs) {
       if (confirmed.length >= a.capacity) break;
       const u = state.users[r.openid] || { openid: r.openid, nickname: '未知球友', level: '' };
-      confirmed.push({ reg: r, entry: { openid: r.openid, nickname: u.nickname, level: u.level || '' } });
+      confirmed.push({ reg: r, entry: { openid: r.openid, nickname: u.nickname, level: u.level || '', gender: u.gender || '' } });
     }
     // pool = attended (exclude explicit absentees); reg & entry stay aligned
     const pool = confirmed.filter((c) => c.reg.attended !== false).map((c) => c.entry);
@@ -596,6 +596,7 @@ async function setRotation(store, id, actorOpenid, params) {
       courts: Number(params.courts) || 1,
       rounds: Number(params.rounds) || 1,
       levelMode: params.levelMode === 'balanced' ? 'balanced' : 'homogeneous',
+      matchFormat: ['mens', 'womens', 'mixed'].includes(params.matchFormat) ? params.matchFormat : 'any',
       fixedPairs: Array.isArray(params.fixedPairs) ? params.fixedPairs : [],
       schedule,
       resting,
