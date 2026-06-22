@@ -182,6 +182,19 @@
         </view>
         <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="assignSession">排本轮</button>
         <button wx:if="{{detail.session}}" class="btn btn-danger" style="margin-top:8rpx;" bindtap="clearSession">结束会话</button>
+        <!-- 公平仪表盘 -->
+        <view wx:if="{{sessFairness}}" class="muted" style="margin-top:8rpx;font-size:22rpx;">公平: {{sessFairness}}</view>
+        <!-- 休息提示 -->
+        <view wx:if="{{detail.session.rounds.length}}" class="muted" style="margin-top:4rpx;font-size:22rpx;color:#16a34a;">休息: {{detail.session.rounds[detail.session.currentRound - 1].resting.length}} 人 → 下轮必上场</view>
+        <!-- 撤销 + 改场数 -->
+        <view class="row" style="margin-top:8rpx;">
+          <button class="btn btn-ghost" style="flex:1;margin:0 4rpx;" bindtap="undoSession">撤销上一轮</button>
+        </view>
+        <view class="row" style="margin-top:8rpx;align-items:center;">
+          <text class="muted" style="width:140rpx;">场地数</text>
+          <input class="input" style="flex:1;" type="number" value="{{sessCourts}}" bindinput="onSessCourts" bindblur="onSessCourtsBlur"/>
+          <button class="btn btn-ghost" style="margin-left:8rpx;font-size:22rpx;padding:8rpx 16rpx;" bindtap="changeSessionCourts">应用</button>
+        </view>
         <block wx:if="{{detail.session && detail.session.rounds.length}}">
           <view wx:for="{{detail.session.rounds}}" wx:for-item="rd" wx:key="*this" style="margin-top:16rpx;">
             <view class="muted" style="font-weight:600;">第 {{index + 1}} 轮</view>
@@ -191,6 +204,25 @@
           </view>
         </block>
       </block>
+    </block>
+  </view>
+
+  <!-- 球员只读：排场进度 -->
+  <view class="card" wx:if="{{!isCreator && detail.confirmed.length && (detail.rotation || (detail.session && detail.session.currentRound > 0))}}">
+    <view class="section-title">排场进度</view>
+    <!-- 轮转表（只读） -->
+    <block wx:if="{{detail.rotation}}">
+      <view class="muted" style="margin-top:8rpx;font-weight:600;">第 {{(detail.rotation.currentRound || 0) + 1}} 轮 ▶</view>
+      <view wx:for="{{detail.rotation.schedule[detail.rotation.currentRound || 0]}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="background:#16a34a;border-radius:12rpx;padding:16rpx;margin-top:8rpx;">
+        <text style="color:#fff;font-size:28rpx;">场{{ci+1}}: {{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
+      </view>
+    </block>
+    <!-- 逐轮（只读） -->
+    <block wx:if="{{detail.session && detail.session.currentRound > 0}}">
+      <view class="muted" style="margin-top:8rpx;font-weight:600;">第 {{detail.session.currentRound}} 轮 ▶</view>
+      <view wx:for="{{detail.session.rounds[detail.session.currentRound - 1].courts}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="background:#16a34a;border-radius:12rpx;padding:16rpx;margin-top:8rpx;">
+        <text style="color:#fff;font-size:28rpx;">场{{ci+1}}: {{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
+      </view>
     </block>
   </view>
 

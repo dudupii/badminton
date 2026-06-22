@@ -36,6 +36,7 @@ Page({
     sessMatchFormat: 'any',
     sessPresent: {},
     sessStarted: false,
+    sessFairness: '',
   },
 
   onLoad(q) {
@@ -424,7 +425,31 @@ Page({
     try {
       const r = await request('POST', '/api/activities/' + d.id + '/session/assign', { present });
       this.setData({ detail: { ...d.detail, session: r.session } });
+      this.setData({ sessFairness: this._fairnessText(r.session) });
     } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
+  },
+  async undoSession() {
+    try {
+      const r = await request('POST', '/api/activities/' + this.data.id + '/session/undo');
+      this.setData({ detail: { ...this.data.detail, session: r.session }, sessFairness: this._fairnessText(r.session) });
+    } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
+  },
+  async changeSessionCourts() {
+    const d = this.data;
+    try {
+      const r = await request('POST', '/api/activities/' + d.id + '/session/courts', { courts: d.sessCourts });
+      this.setData({ detail: { ...d.detail, session: r.session } });
+      wx.showToast({ title: '场地数已更新', icon: 'none' });
+    } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
+  },
+  _fairnessText(session) {
+    if (!session || !session.games) return '';
+    const roster = (this.data.detail.confirmed || []);
+    return roster
+      .map((p) => ({ no: p.no, nickname: p.nickname, g: session.games[p.openid] || 0 }))
+      .sort((a, b) => b.g - a.g)
+      .map((p) => p.no + '-' + p.nickname + ':' + p.g)
+      .join(' · ');
   },
   async clearSession() {
     try {
