@@ -92,6 +92,8 @@ Page({
           }
         : { mode: 'total', amount: '', splitBy: 'confirmed' };
 
+      if (d.rotation) d.rotation = this._injectRotationNo(d.rotation, d.confirmed);
+
       this.setData({
         feeEdit,
         id: d.id,
@@ -293,6 +295,17 @@ Page({
       wx.showToast({ title: e.message, icon: 'none' });
     }
   },
+  // 给轮转 schedule 的每个 player 注入报名序号 no（confirmed 里第几个=几号）。
+  _injectRotationNo(rotation, confirmed) {
+    if (!rotation || !rotation.schedule) return rotation;
+    const noMap = {};
+    (confirmed || []).forEach((x, i) => { noMap[x.openid] = i + 1; });
+    rotation.schedule = rotation.schedule.map((rd) =>
+      rd.map((c) => c.map((p) => ({ ...p, no: noMap[p.openid] || '?' })))
+    );
+    return rotation;
+  },
+
   async genRotation() {
     const d = this.data;
     try {
@@ -304,7 +317,7 @@ Page({
         fixedPairs: d.rotFixed,
       });
       // r is the activity object (with rotation); pull rotation into detail
-      this.setData({ detail: { ...d.detail, rotation: r.rotation } });
+      this.setData({ detail: { ...d.detail, rotation: this._injectRotationNo(r.rotation, d.detail.confirmed) } });
     } catch (e) {
       wx.showToast({ title: e.message, icon: 'none' });
     }

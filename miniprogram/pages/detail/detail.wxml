@@ -144,7 +144,7 @@
         <view wx:for="{{detail.rotation.schedule}}" wx:for-item="round" wx:key="*this" style="margin-top:16rpx;">
           <view class="muted" style="font-weight:600;">第 {{index+1}} 轮</view>
           <view wx:for="{{round}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="padding:4rpx 0;">
-            <text class="muted">场{{ci+1}}：</text>{{court[0].nickname}}{{court[1] ? '/' + court[1].nickname : ''}}{{court[2] ? '/' + court[2].nickname : ''}}{{court[3] ? '/' + court[3].nickname : ''}}
+            <text class="muted">场{{ci+1}}：</text>{{court[0].no}}-{{court[0].nickname}}{{court[1] ? ' / ' + court[1].no + '-' + court[1].nickname : ''}}{{court[2] ? ' / ' + court[2].no + '-' + court[2].nickname : ''}}{{court[3] ? ' / ' + court[3].no + '-' + court[3].nickname : ''}}
           </view>
         </view>
       </block>
