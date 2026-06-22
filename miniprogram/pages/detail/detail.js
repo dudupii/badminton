@@ -23,6 +23,12 @@ Page({
     grouping: null,
     groupMode: 'groups',
     groupCount: 2,
+    rotCourts: 3,
+    rotRounds: 6,
+    rotLevelMode: 'homogeneous',
+    rotFixed: [], // [[openid,openid],…]
+    rotFixedFlat: [], // openids that are in some fixed pair (for wxml highlight)
+    rotPairPick: null, // openid of first half-picked pair, or null
   },
 
   onLoad(q) {
@@ -261,7 +267,8 @@ Page({
   },
 
   onGroupModeChange(e) {
-    this.setData({ groupMode: Number(e.detail.value) === 1 ? 'pairs' : 'groups' });
+    const idx = Number(e.detail.value);
+    this.setData({ groupMode: ['groups', 'pairs', 'rotation'][idx] || 'groups' });
   },
   onGroupCount(e) {
     this.setData({ groupCount: e.detail.value }); // free typing while focused
@@ -284,6 +291,50 @@ Page({
     } catch (e) {
       wx.showToast({ title: e.message, icon: 'none' });
     }
+  },
+  async genRotation() {
+    const d = this.data;
+    try {
+      const r = await request('POST', '/api/activities/' + d.id + '/rotation', {
+        courts: d.rotCourts,
+        rounds: d.rotRounds,
+        levelMode: d.rotLevelMode,
+        fixedPairs: d.rotFixed,
+      });
+      // r is the activity object (with rotation); pull rotation into detail
+      this.setData({ detail: { ...d.detail, rotation: r.rotation } });
+    } catch (e) {
+      wx.showToast({ title: e.message, icon: 'none' });
+    }
+  },
+  async clearRotation() {
+    try {
+      await request('DELETE', '/api/activities/' + this.data.id + '/rotation');
+      this.setData({ detail: { ...this.data.detail, rotation: null } });
+    } catch (e) {
+      wx.showToast({ title: e.message, icon: 'none' });
+    }
+  },
+  onRotCourts(e) { this.setData({ rotCourts: e.detail.value }); },
+  onRotCourtsBlur(e) { let v = parseInt(e.detail.value, 10); this.setData({ rotCourts: isNaN(v) || v < 1 ? 1 : v }); },
+  onRotRounds(e) { this.setData({ rotRounds: e.detail.value }); },
+  onRotRoundsBlur(e) { let v = parseInt(e.detail.value, 10); this.setData({ rotRounds: isNaN(v) || v < 1 ? 1 : v }); },
+  onRotLevelMode(e) { this.setData({ rotLevelMode: Number(e.detail.value) === 1 ? 'balanced' : 'homogeneous' }); },
+  // Tap to form pairs: tap 1st → tap 2nd → pair; tap an already-paired player → remove that pair
+  toggleRotPair(e) {
+    const oid = e.currentTarget.dataset.openid;
+    const fixed = this.data.rotFixed.slice();
+    const existing = fixed.findIndex((pr) => pr[0] === oid || pr[1] === oid);
+    if (existing >= 0) {
+      fixed.splice(existing, 1);
+      this.setData({ rotFixed: fixed, rotFixedFlat: fixed.flat(), rotPairPick: null });
+      return;
+    }
+    const pick = this.data.rotPairPick;
+    if (!pick) { this.setData({ rotPairPick: oid }); return; }
+    if (pick === oid) { this.setData({ rotPairPick: null }); return; }
+    fixed.push([pick, oid]);
+    this.setData({ rotFixed: fixed, rotFixedFlat: fixed.flat(), rotPairPick: null });
   },
 
   async deleteActivity() {

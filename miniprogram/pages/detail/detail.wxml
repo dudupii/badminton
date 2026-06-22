@@ -90,8 +90,8 @@
     <view class="section-title">水平分组</view>
     <view class="row" style="margin-top:12rpx;align-items:center;">
       <text class="muted" style="width:140rpx;">模式</text>
-      <picker bindchange="onGroupModeChange" value="{{groupMode==='pairs'?1:0}}" range="{{['分N组(场地)','双打搭档']}}">
-        <view class="input" style="flex:1;">{{groupMode==='pairs'?'双打搭档':'分N组(场地)'}}</view>
+      <picker bindchange="onGroupModeChange" value="{{groupMode==='pairs'?1:groupMode==='rotation'?2:0}}" range="{{['分N组(场地)','双打搭档','轮转表']}}">
+        <view class="input" style="flex:1;">{{groupMode==='rotation'?'轮转表':groupMode==='pairs'?'双打搭档':'分N组(场地)'}}</view>
       </picker>
     </view>
     <view class="row" wx:if="{{groupMode==='groups'}}" style="margin-top:12rpx;align-items:center;">
@@ -106,6 +106,42 @@
           {{p.nickname}}（{{p.level||'未填'}}）
         </view>
       </view>
+    </block>
+
+    <block wx:if="{{groupMode === 'rotation'}}">
+      <view class="row" style="margin-top:12rpx;align-items:center;">
+        <text class="muted" style="width:140rpx;">场地数</text>
+        <input class="input" style="flex:1;" type="number" value="{{rotCourts}}" bindinput="onRotCourts" bindblur="onRotCourtsBlur"/>
+      </view>
+      <view class="row" style="margin-top:12rpx;align-items:center;">
+        <text class="muted" style="width:140rpx;">轮数</text>
+        <input class="input" style="flex:1;" type="number" value="{{rotRounds}}" bindinput="onRotRounds" bindblur="onRotRoundsBlur"/>
+      </view>
+      <view class="row" style="margin-top:12rpx;align-items:center;">
+        <text class="muted" style="width:140rpx;">水平</text>
+        <picker bindchange="onRotLevelMode" value="{{rotLevelMode==='balanced'?1:0}}" range="{{['同质(相近同场)','均衡(强弱搭)']}}">
+          <view class="input" style="flex:1;">{{rotLevelMode==='balanced'?'均衡(强弱搭)':'同质(相近同场)'}}</view>
+        </picker>
+      </view>
+
+      <view class="muted" style="margin-top:16rpx;font-size:24rpx;">固定搭档（可选）：点一人、再点另一人配对；点已配对人解除</view>
+      <view class="row" style="margin-top:8rpx;flex-wrap:wrap;">
+        <view wx:for="{{detail.confirmed}}" wx:key="openid" data-openid="{{item.openid}}" bindtap="toggleRotPair"
+              class="tag {{rotFixedFlat.indexOf(item.openid) >= 0 ? 'tag-open' : (rotPairPick === item.openid ? 'tag-wait' : 'tag-level')}}" style="margin:6rpx 8rpx 0 0;">{{item.nickname}}</view>
+      </view>
+      <view class="muted" wx:if="{{rotPairPick}}" style="margin-top:6rpx;font-size:22rpx;">已选 1 人，再点一人配对…</view>
+
+      <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="genRotation">生成轮转</button>
+      <button wx:if="{{detail.rotation}}" class="btn btn-ghost" style="margin-top:12rpx;" bindtap="clearRotation">清除轮转</button>
+
+      <block wx:if="{{detail.rotation}}">
+        <view wx:for="{{detail.rotation.schedule}}" wx:for-item="round" wx:key="*this" style="margin-top:16rpx;">
+          <view class="muted" style="font-weight:600;">第 {{index+1}} 轮</view>
+          <view wx:for="{{round}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="padding:4rpx 0;">
+            <text class="muted">场{{ci+1}}：</text>{{court[0].nickname}}{{court[1] ? '/' + court[1].nickname : ''}}{{court[2] ? '/' + court[2].nickname : ''}}{{court[3] ? '/' + court[3].nickname : ''}}
+          </view>
+        </view>
+      </block>
     </block>
   </view>
 
