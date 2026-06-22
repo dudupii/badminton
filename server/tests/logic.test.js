@@ -730,6 +730,39 @@ test('setRotation stores + clearRotation removes; creator only; pool = attended'
   await withError(403, logic.clearRotation(store, act.id, 'stranger'));
 });
 
+test('generateRotation: matchFormat forms one format-court when enough of the gender', () => {
+  const mk = (id, g, lv) => ({ openid: id, nickname: id, gender: g, level: lv });
+  const ps = [];
+  for (let i = 0; i < 8; i++) ps.push(mk('m' + i, '男', ['高级', '中级', '初级', '新手'][i % 4]));
+  for (let i = 0; i < 8; i++) ps.push(mk('f' + i, '女', ['高级', '中级', '初级', '新手'][i % 4]));
+
+  const womens = logic.generateRotation(ps, { courts: 4, rounds: 1, levelMode: 'homogeneous', fixedPairs: [], matchFormat: 'womens' });
+  assert.equal(womens.schedule[0][0].filter((p) => p.gender === '女').length, 4, 'womens court[0] all women');
+
+  const mens = logic.generateRotation(ps, { courts: 4, rounds: 1, levelMode: 'homogeneous', fixedPairs: [], matchFormat: 'mens' });
+  assert.equal(mens.schedule[0][0].filter((p) => p.gender === '男').length, 4, 'mens court[0] all men');
+
+  const mixed = logic.generateRotation(ps, { courts: 4, rounds: 1, levelMode: 'homogeneous', fixedPairs: [], matchFormat: 'mixed' });
+  const c0 = mixed.schedule[0][0];
+  assert.equal(c0.filter((p) => p.gender === '男').length, 2, 'mixed court[0] 2 men');
+  assert.equal(c0.filter((p) => p.gender === '女').length, 2, 'mixed court[0] 2 women');
+
+  const anyR = logic.generateRotation(ps, { courts: 4, rounds: 1, levelMode: 'homogeneous', fixedPairs: [] });
+  assert.equal(anyR.schedule[0][0].length, 4); // default 'any' → 4 players, not gender-constrained
+});
+
+test('generateRotation: matchFormat falls back to level-based when gender insufficient', () => {
+  const mk = (id, g) => ({ openid: id, nickname: id, gender: g, level: '中级' });
+  const ps = [];
+  for (let i = 0; i < 6; i++) ps.push(mk('m' + i, '男'));
+  for (let i = 0; i < 2; i++) ps.push(mk('f' + i, '女'));
+  const r = logic.generateRotation(ps, { courts: 2, rounds: 1, levelMode: 'homogeneous', fixedPairs: [], matchFormat: 'womens' });
+  assert.equal(r.schedule[0].length, 2);
+  r.schedule[0].forEach((c) => assert.equal(c.length, 4));
+  // only 2 women total ⇒ no all-women court ⇒ each court has a man (proves format didn't force)
+  r.schedule[0].forEach((c) => assert.ok(c.some((p) => p.gender === '男'), 'each court has a man (no forced womens court)'));
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

@@ -122,8 +122,36 @@ function reunitePairs(groups, fixedPairs) {
   }
 }
 
+// Try to pull one format-court (4 players) out of the playing set by gender.
+// Returns [courtOf4, rest] or null when the playing set lacks enough of the gender.
+function extractFormatCourt(players, matchFormat) {
+  const men = players
+    .filter((p) => p.gender === '男')
+    .sort((a, b) => levelWeight(b.level) - levelWeight(a.level));
+  const women = players
+    .filter((p) => p.gender === '女')
+    .sort((a, b) => levelWeight(b.level) - levelWeight(a.level));
+  let take = null;
+  if (matchFormat === 'mens' && men.length >= 4) take = men.slice(0, 4);
+  else if (matchFormat === 'womens' && women.length >= 4) take = women.slice(0, 4);
+  else if (matchFormat === 'mixed' && men.length >= 2 && women.length >= 2)
+    take = men.slice(0, 2).concat(women.slice(0, 2));
+  if (!take) return null;
+  const takeSet = new Set(take.map((p) => p.openid));
+  const rest = players.filter((p) => !takeSet.has(p.openid));
+  return [take, rest];
+}
+
 // Split the SLOTS playing players into C courts of 4 by level mode, reuniting pairs.
-function assignRotationCourts(players, courts, levelMode, fixedPairs) {
+function assignRotationCourts(players, courts, levelMode, fixedPairs, matchFormat) {
+  if (matchFormat && matchFormat !== 'any') {
+    const fmt = extractFormatCourt(players, matchFormat);
+    if (fmt) {
+      const [fmtCourt, rest] = fmt;
+      const others = assignRotationCourts(rest, courts - 1, levelMode, fixedPairs, 'any');
+      return [fmtCourt, ...others];
+    }
+  }
   const sorted = players.slice().sort((a, b) => levelWeight(b.level) - levelWeight(a.level)); // desc
   const groups = Array.from({ length: courts }, () => []);
   if (levelMode === 'balanced') {
@@ -142,7 +170,7 @@ function assignRotationCourts(players, courts, levelMode, fixedPairs) {
 // Greedy multi-round rotation. Doubles (4/court). Hard "no 2 consecutive rests"
 // when players <= 8*courts; relaxed (best-effort) otherwise. Fairness / level /
 // fixed-pairs are soft. Throws 400 if players can't fill the courts.
-function generateRotation(players, { courts, rounds, levelMode, fixedPairs }) {
+function generateRotation(players, { courts, rounds, levelMode, fixedPairs, matchFormat }) {
   const C = Math.max(1, Number(courts) || 1);
   const R = Math.max(1, Number(rounds) || 1);
   const slots = 4 * C;
@@ -166,7 +194,7 @@ function generateRotation(players, { courts, rounds, levelMode, fixedPairs }) {
     const playing = forced.concat(pickFewestGames(others, slots - forced.length, games));
     const playingSet = new Set(playing.map((p) => p.openid));
     const resters = pool.filter((p) => !playingSet.has(p.openid));
-    schedule.push(assignRotationCourts(playing, C, levelMode, fixedPairs));
+    schedule.push(assignRotationCourts(playing, C, levelMode, fixedPairs, matchFormat));
     resting.push(resters.map((p) => p.openid));
     playing.forEach((p) => {
       games[p.openid]++;
