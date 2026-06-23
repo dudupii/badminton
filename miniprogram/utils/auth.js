@@ -39,6 +39,9 @@ async function ensureLogin(opts) {
     code,
     devUserId: devUserId(),
   });
+  if (!data || !data.token || !data.user) {
+    throw new Error('登录响应异常: ' + JSON.stringify(data).slice(0, 100));
+  }
   setToken(data.token);
   app.globalData.openid = data.user.openid;
   app.globalData.userInfo = data.user;

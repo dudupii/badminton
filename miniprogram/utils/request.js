@@ -39,9 +39,14 @@ async function request(method, path, data) {
     res = await rawRequest(method, path, data || {}, token);
   }
 
+  // Diagnostic: log the raw response for debugging
+  if (path === '/api/auth/login') {
+    console.log('[diag] login response:', res.statusCode, typeof res.data, JSON.stringify(res.data).slice(0, 200));
+  }
+
   const body = res.data;
   if (!body || typeof body !== 'object') {
-    throw new Error('服务器响应异常 (' + res.statusCode + ')');
+    throw new Error('服务器响应异常 (' + res.statusCode + '): ' + String(res.data).slice(0, 80));
   }
   if (res.statusCode >= 400 || body.ok === false) {
     throw new Error(body.error || '请求失败 (' + res.statusCode + ')');
