@@ -39,6 +39,7 @@ Page({
     sessAbsent: {}, // {openid: true} = 标记为不在场/休息；默认全在场
     sessStarted: false,
     sessFairness: '',
+    sessFairBars: [],
   },
 
   onLoad(q) {
@@ -485,11 +486,18 @@ Page({
   _fairnessText(session) {
     if (!session || !session.games) return '';
     const roster = (this.data.detail.confirmed || []);
-    return roster
+    const data = roster
       .map((p) => ({ no: p.no, nickname: p.nickname, g: session.games[p.openid] || 0 }))
-      .sort((a, b) => b.g - a.g)
-      .map((p) => p.no + '-' + p.nickname + ':' + p.g)
-      .join(' · ');
+      .sort((a, b) => b.g - a.g);
+    const max = Math.max(...data.map((d) => d.g), 1);
+    const bars = data.map((d) => ({
+      label: d.no + '-' + d.nickname,
+      games: d.g,
+      pct: Math.round((d.g / max) * 100),
+      color: d.g === max ? '#16a34a' : d.g === 0 ? '#dc2626' : '#6b7280',
+    }));
+    this.setData({ sessFairBars: bars });
+    return data.map((p) => p.g).join('/');
   },
   async clearSession() {
     try {
