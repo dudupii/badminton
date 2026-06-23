@@ -56,6 +56,15 @@ Page({
       wx.showToast({ title: '登录失败：' + e.message, icon: 'none' });
     }
     await this.load();
+    // Auto-refresh for players: poll every 15s while page is visible and a
+    // session/rotation exists (so they see the organizer's latest round).
+    this._pollTimer = setInterval(() => { this.load(); }, 15000);
+  },
+  onHide() {
+    if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
+  },
+  onUnload() {
+    if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
   },
 
   async load() {
@@ -313,7 +322,6 @@ Page({
 
   async genRotation() {
     const d = this.data;
-    console.log('[diag] genRotation fixedPairs:', JSON.stringify(d.rotFixed));
     try {
       const r = await request('POST', '/api/activities/' + d.id + '/rotation', {
         courts: d.rotCourts,
