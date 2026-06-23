@@ -86,9 +86,9 @@
     <button class="btn btn-ghost" style="margin-top:16rpx;" bindtap="exportFee">导出费用表(CSV)</button>
   </view>
 
-  <!-- 水平分组（仅发起人） -->
+  <!-- 排场管理（仅发起人） -->
   <view class="card" wx:if="{{isCreator && detail.confirmed.length}}">
-    <view class="section-title">水平分组</view>
+    <view class="section-title">排场管理</view>
     <view class="row" style="margin-top:12rpx;align-items:center;">
       <text class="muted" style="width:140rpx;">模式</text>
       <picker bindchange="onGroupModeChange" value="{{groupMode==='session'?1:0}}" range="{{['轮转表','逐轮(动态)']}}">
@@ -182,6 +182,7 @@
         </view>
         <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="assignSession">排本轮</button>
         <button wx:if="{{detail.session}}" class="btn btn-danger" style="margin-top:8rpx;" bindtap="clearSession">结束会话</button>
+        <button wx:if="{{detail.session && detail.session.rounds.length}}" class="btn btn-ghost" style="margin-top:8rpx;" bindtap="copySession">复制会话(文本)</button>
         <!-- 公平仪表盘 -->
         <view wx:if="{{sessFairness}}" class="muted" style="margin-top:8rpx;font-size:22rpx;">公平: {{sessFairness}}</view>
         <!-- 休息提示 -->

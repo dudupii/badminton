@@ -20,9 +20,7 @@ Page({
     feeSummary: null,
     feeEdit: { mode: 'total', amount: '', splitBy: 'confirmed' },
     myFee: null,
-    grouping: null,
-    groupMode: 'groups',
-    groupCount: 2,
+    groupMode: 'rotation',
     rotCourts: 3,
     rotRounds: 6,
     rotLevelMode: 'homogeneous',
@@ -293,28 +291,6 @@ Page({
   onGroupModeChange(e) {
     this.setData({ groupMode: Number(e.detail.value) === 1 ? 'session' : 'rotation' });
   },
-  onGroupCount(e) {
-    this.setData({ groupCount: e.detail.value }); // free typing while focused
-  },
-  onGroupCountBlur(e) {
-    let v = parseInt(e.detail.value, 10);
-    if (isNaN(v) || v < 1) v = 1;
-    if (v > 20) v = 20;
-    this.setData({ groupCount: v });
-  },
-  async genGroups() {
-    try {
-      const r = await request(
-        'GET',
-        '/api/activities/' + this.data.id + '/grouping?mode=' + this.data.groupMode + '&count=' + this.data.groupCount
-      );
-      // Tag each group with a stable id so wx:key works (groups are arrays of arrays).
-      r.groups = (r.groups || []).map((members, i) => ({ id: i, members }));
-      this.setData({ grouping: r });
-    } catch (e) {
-      wx.showToast({ title: e.message, icon: 'none' });
-    }
-  },
   // 给轮转 schedule 的每个 player 注入报名序号 no（confirmed 里第几个=几号）。
   _injectRotationNo(rotation, confirmed) {
     if (!rotation || !rotation.schedule) return rotation;
@@ -473,6 +449,20 @@ Page({
   onSessCourtsBlur(e) { let v = parseInt(e.detail.value, 10); this.setData({ sessCourts: isNaN(v) || v < 1 ? 1 : v }); },
   onSessLevelMode(e) { this.setData({ sessLevelMode: Number(e.detail.value) === 1 ? 'balanced' : 'homogeneous' }); },
   onSessMatchFormat(e) { this.setData({ sessMatchFormat: ['any','mens','womens','mixed'][Number(e.detail.value)] || 'any' }); },
+  copySession() {
+    const d = this.data.detail;
+    const sess = d && d.session;
+    if (!sess || !sess.rounds.length) return wx.showToast({ title: '暂无轮次', icon: 'none' });
+    const noMap = {}; (d.confirmed || []).forEach((x, i) => { noMap[x.openid] = i + 1; });
+    const label = (p) => (p.no || noMap[p.openid] || '?') + '-' + (p.nickname || '');
+    const lines = [(d.title || '活动') + ' · 逐轮排场'];
+    sess.rounds.forEach((rd, ri) => {
+      lines.push('第' + (ri + 1) + '轮');
+      rd.courts.forEach((c, ci) => lines.push('  场' + (ci + 1) + ': ' + c.map(label).join(' / ')));
+      lines.push('  休息: ' + (rd.resting || []).map((oid) => (noMap[oid] || '?') + '-' + (((d.confirmed || []).find((x) => x.openid === oid)) || {}).nickname || oid).join('、'));
+    });
+    wx.setClipboardData({ data: lines.join('\n'), success: () => wx.showToast({ title: '已复制到剪贴板', icon: 'none' }) });
+  },
   onRotCourts(e) { this.setData({ rotCourts: e.detail.value }); },
   onRotCourtsBlur(e) { let v = parseInt(e.detail.value, 10); this.setData({ rotCourts: isNaN(v) || v < 1 ? 1 : v }); },
   onRotRounds(e) { this.setData({ rotRounds: e.detail.value }); },
