@@ -58,7 +58,7 @@ Page({
     await this.load();
     // Auto-refresh for players: poll every 15s while page is visible and a
     // session/rotation exists (so they see the organizer's latest round).
-    this._pollTimer = setInterval(() => { this.load(); }, 15000);
+    this._pollTimer = setInterval(() => { this.load(); }, 5000);
   },
   onHide() {
     if (this._pollTimer) { clearInterval(this._pollTimer); this._pollTimer = null; }
