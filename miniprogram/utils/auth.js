@@ -1,4 +1,5 @@
 const { request, setToken } = require('./request');
+const { ENV } = require('./config');
 
 // Stable per-device identity used ONLY in dev mode (server has no WeChat
 // AppID). In production the server ignores this and uses the real openid from
@@ -28,17 +29,11 @@ async function ensureLogin(opts) {
     return app.globalData.token;
   }
 
-  // wx.login() can timeout on the Linux community port (no WeChat credentials).
-  // In devMode the server ignores code and uses devUserId, so a failure is
-  // non-fatal — just proceed without a code.
+  // wx.login() times out on the Linux community port (no WeChat credentials).
+  // In develop env, skip it entirely — the server uses devUserId, not code.
   let code;
-  try {
-    code = await Promise.race([
-      wxLogin(),
-      new Promise((resolve) => setTimeout(() => resolve(undefined), 3000)),
-    ]);
-  } catch (e) {
-    code = undefined;
+  if (ENV !== 'develop') {
+    code = await wxLogin();
   }
   const data = await request('POST', '/api/auth/login', {
     code,

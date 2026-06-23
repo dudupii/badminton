@@ -152,19 +152,19 @@
           <button class="btn btn-ghost" style="padding:8rpx 24rpx;" bindtap="rotNext">▶</button>
         </view>
         <!-- 当前轮大字卡片 -->
-        <view wx:for="{{detail.rotation.schedule[rotCurrentRound]}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="background:#16a34a;border-radius:12rpx;padding:20rpx;margin-top:12rpx;">
+        <view wx:for="{{detail.rotation.schedule[rotCurrentRound]}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="background:#16a34a;border-radius:12rpx;padding:20rpx;margin-top:12rpx;">
           <text style="color:#fff;font-size:28rpx;font-weight:bold;">场{{ci+1}}</text>
           <text style="color:#fff;font-size:30rpx;margin-left:16rpx;">{{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
         </view>
         <view class="muted" style="margin-top:8rpx;font-size:24rpx;">休息: {{detail.rotation.resting[rotCurrentRound].length}} 人</view>
         <button class="btn btn-ghost" style="margin-top:8rpx;font-size:24rpx;" data-ri="{{rotCurrentRound}}" bindtap="copyOneRound">复制本轮</button>
         <!-- 全部轮次（当前高亮，其余灰显） -->
-        <view wx:for="{{detail.rotation.schedule}}" wx:for-item="round" wx:key="*this" style="margin-top:12rpx;{{index === rotCurrentRound ? 'opacity:1;' : 'opacity:0.4;'}}">
+        <view wx:for="{{detail.rotation.schedule}}" wx:for-item="round" wx:key="index" style="margin-top:12rpx;{{index === rotCurrentRound ? 'opacity:1;' : 'opacity:0.4;'}}">
           <view class="row between">
             <text class="muted" style="font-weight:600;">第 {{index + 1}} 轮{{index === rotCurrentRound ? ' ▶' : ''}}</text>
             <text class="muted" style="font-size:22rpx;" data-ri="{{index}}" bindtap="copyOneRound">复制</text>
           </view>
-          <view wx:for="{{round}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="padding:2rpx 0;">
+          <view wx:for="{{round}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="padding:2rpx 0;">
             <text class="muted" style="font-size:24rpx;">场{{ci+1}}：</text><text style="font-size:24rpx;">{{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
           </view>
         </view>
@@ -210,9 +210,9 @@
           <button class="btn btn-ghost" style="margin-left:8rpx;font-size:22rpx;padding:8rpx 16rpx;" bindtap="changeSessionCourts">应用</button>
         </view>
         <block wx:if="{{detail.session && detail.session.rounds.length}}">
-          <view wx:for="{{detail.session.rounds}}" wx:for-item="rd" wx:key="*this" style="margin-top:16rpx;">
+          <view wx:for="{{detail.session.rounds}}" wx:for-item="rd" wx:key="index" style="margin-top:16rpx;">
             <view class="muted" style="font-weight:600;">第 {{index + 1}} 轮</view>
-            <view wx:for="{{rd.courts}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="padding:4rpx 0;">
+            <view wx:for="{{rd.courts}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="padding:4rpx 0;">
               <text class="muted">场{{ci+1}}：</text>{{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}
             </view>
           </view>
@@ -227,14 +227,14 @@
     <!-- 轮转表（只读） -->
     <block wx:if="{{detail.rotation}}">
       <view class="muted" style="margin-top:8rpx;font-weight:600;">第 {{(detail.rotation.currentRound || 0) + 1}} 轮 ▶</view>
-      <view wx:for="{{detail.rotation.schedule[detail.rotation.currentRound || 0]}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="background:#16a34a;border-radius:12rpx;padding:16rpx;margin-top:8rpx;">
+      <view wx:for="{{detail.rotation.schedule[detail.rotation.currentRound || 0]}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="background:#16a34a;border-radius:12rpx;padding:16rpx;margin-top:8rpx;">
         <text style="color:#fff;font-size:28rpx;">场{{ci+1}}: {{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
       </view>
     </block>
     <!-- 逐轮（只读） -->
     <block wx:if="{{detail.session && detail.session.currentRound > 0}}">
       <view class="muted" style="margin-top:8rpx;font-weight:600;">第 {{detail.session.currentRound}} 轮 ▶</view>
-      <view wx:for="{{detail.session.rounds[detail.session.currentRound - 1].courts}}" wx:for-item="court" wx:for-index="ci" wx:key="*this" style="background:#16a34a;border-radius:12rpx;padding:16rpx;margin-top:8rpx;">
+      <view wx:for="{{detail.session.rounds[detail.session.currentRound - 1].courts}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="background:#16a34a;border-radius:12rpx;padding:16rpx;margin-top:8rpx;">
         <text style="color:#fff;font-size:28rpx;">场{{ci+1}}: {{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
       </view>
     </block>
