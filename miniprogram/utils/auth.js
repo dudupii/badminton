@@ -28,7 +28,18 @@ async function ensureLogin(opts) {
     return app.globalData.token;
   }
 
-  const code = await wxLogin();
+  // wx.login() can timeout on the Linux community port (no WeChat credentials).
+  // In devMode the server ignores code and uses devUserId, so a failure is
+  // non-fatal — just proceed without a code.
+  let code;
+  try {
+    code = await Promise.race([
+      wxLogin(),
+      new Promise((resolve) => setTimeout(() => resolve(undefined), 3000)),
+    ]);
+  } catch (e) {
+    code = undefined;
+  }
   const data = await request('POST', '/api/auth/login', {
     code,
     devUserId: devUserId(),
