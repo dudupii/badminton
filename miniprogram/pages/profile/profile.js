@@ -106,10 +106,7 @@ Page({
   },
 
   goDetail(e) {
-    wx.switchTab({ url: '/pages/index/index' });
-    setTimeout(() => {
-      wx.navigateTo({ url: '/pages/detail/detail?id=' + e.currentTarget.dataset.id });
-    }, 100);
+    wx.navigateTo({ url: '/pages/detail/detail?id=' + e.currentTarget.dataset.id });
   },
 
   goStats() {

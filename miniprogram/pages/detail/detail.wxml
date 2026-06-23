@@ -1,4 +1,6 @@
 <view class="container" wx:if="{{detail}}">
+  <!-- scan entry: back-to-profile button -->
+  <button wx:if="{{isScanEntry}}" class="btn btn-ghost" style="margin-bottom:8rpx;" bindtap="goProfile">← 返回我的</button>
   <!-- header -->
   <view class="card">
     <view class="row between">

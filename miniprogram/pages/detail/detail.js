@@ -7,6 +7,7 @@ Page({
   data: {
     id: '',
     scene: '', // invite code, present when opened by scanning the activity QR
+    isScanEntry: false, // true when detail is the first page (QR scan entry)
     detail: null,
     qrcodeUrl: '',
     loading: true,
@@ -43,7 +44,9 @@ Page({
   onLoad(q) {
     // q.id: normal in-app navigation; q.scene: arrived via scanned mini-program code.
     const scene = q.scene ? decodeURIComponent(q.scene) : '';
-    this.setData({ id: q.id || '', scene });
+    // Scan entry: detail is the first (only) page in the stack → no back target.
+    const isScanEntry = getCurrentPages().length === 1;
+    this.setData({ id: q.id || '', scene, isScanEntry });
   },
 
   async onShow() {
@@ -219,6 +222,9 @@ Page({
 
   goEdit() {
     wx.navigateTo({ url: '/pages/create/create?id=' + this.data.id });
+  },
+  goProfile() {
+    wx.switchTab({ url: '/pages/profile/profile' });
   },
 
   onFeeModeChange(e) {
