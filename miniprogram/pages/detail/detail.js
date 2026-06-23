@@ -490,12 +490,15 @@ Page({
       .map((p) => ({ no: p.no, nickname: p.nickname, g: session.games[p.openid] || 0 }))
       .sort((a, b) => b.g - a.g);
     const max = Math.max(...data.map((d) => d.g), 1);
-    const bars = data.map((d) => ({
-      label: d.no + '-' + d.nickname,
-      games: d.g,
-      pct: Math.round((d.g / max) * 100),
-      color: d.g === max ? '#16a34a' : d.g === 0 ? '#dc2626' : '#6b7280',
-    }));
+    const bars = data.map((d) => {
+      const ratio = max > 0 ? d.g / max : 0;
+      let bg, color;
+      if (d.g === max) { bg = '#dcfce7'; color = '#16a34a'; }
+      else if (d.g === 0) { bg = '#fee2e2'; color = '#dc2626'; }
+      else if (ratio <= 0.5) { bg = '#fef3c7'; color = '#b45309'; }
+      else { bg = '#f0fdf4'; color = '#15803d'; }
+      return { label: d.no + '-' + d.nickname, games: d.g, bg, color };
+    });
     this.setData({ sessFairBars: bars });
     return data.map((p) => p.g).join('/');
   },

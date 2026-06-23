@@ -196,15 +196,14 @@
         <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="assignSession">排本轮</button>
         <button wx:if="{{detail.session}}" class="btn btn-danger" style="margin-top:8rpx;" bindtap="clearSession">结束会话</button>
         <button wx:if="{{detail.session && detail.session.rounds.length}}" class="btn btn-ghost" style="margin-top:8rpx;" bindtap="copySession">复制会话(文本)</button>
-        <!-- 公平仪表盘 -->
-        <view wx:if="{{sessFairBars.length}}" style="margin-top:12rpx;padding:16rpx;background:#f9fafb;border-radius:12rpx;">
+        <!-- 公平仪表盘：4列网格表格 -->
+        <view wx:if="{{sessFairBars.length}}" style="margin-top:12rpx;">
           <view class="muted" style="font-size:22rpx;margin-bottom:8rpx;">公平度（上场次数）</view>
-          <view wx:for="{{sessFairBars}}" wx:key="label" style="display:flex;align-items:center;margin:4rpx 0;">
-            <text style="width:160rpx;font-size:22rpx;overflow:hidden;white-space:nowrap;">{{item.label}}</text>
-            <view style="flex:1;height:24rpx;background:#e5e7eb;border-radius:12rpx;overflow:hidden;margin:0 8rpx;">
-              <view style="height:100%;width:{{item.pct}}%;background:{{item.color}};border-radius:12rpx;"></view>
+          <view style="display:flex;flex-wrap:wrap;border-radius:8rpx;overflow:hidden;">
+            <view wx:for="{{sessFairBars}}" wx:key="label" style="width:25%;padding:8rpx 4rpx;text-align:center;font-size:22rpx;background:{{item.bg}};border:1rpx solid #fff;box-sizing:border-box;">
+              <view style="font-weight:bold;color:{{item.color}};">{{item.games}}</view>
+              <view style="color:#6b7280;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">{{item.label}}</view>
             </view>
-            <text style="width:40rpx;font-size:22rpx;text-align:right;color:{{item.color}};font-weight:bold;">{{item.games}}</text>
           </view>
         </view>
         <!-- 休息提示 -->
