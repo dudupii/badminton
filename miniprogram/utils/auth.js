@@ -24,6 +24,7 @@ function wxLogin() {
 // reload with a cached token would leave globalData.openid null (it's not in
 // the token), breaking any client-side creator/self check (isCreator, etc.).
 async function ensureLogin(opts) {
+  opts = opts || {};
   const app = getApp();
   if (app.globalData.token && app.globalData.openid && !opts.force) {
     return app.globalData.token;
