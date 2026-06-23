@@ -11,6 +11,8 @@ Page({
     qrcodeUrl: '',
     loading: true,
     proxyName: '', // 代理追加昵称输入
+    proxyLevel: '', // 代理追加水平
+    proxyGender: '', // 代理追加性别
     isCreator: false,
     canRegister: false,
     canCancel: false,
@@ -328,14 +330,19 @@ Page({
     }
   },
   onProxyName(e) { this.setData({ proxyName: e.detail.value }); },
+  onProxyLevel(e) { this.setData({ proxyLevel: ['新手','初级','中级','高级'][Number(e.detail.value)] || '' }); },
+  onProxyGender(e) { this.setData({ proxyGender: ['男','女','不公开'][Number(e.detail.value)] || '' }); },
   async proxyRegister() {
     const d = this.data;
     const name = (d.proxyName || '').trim();
     if (!name) return wx.showToast({ title: '请填写昵称', icon: 'none' });
+    const body = { nickname: name };
+    if (d.proxyLevel) body.level = d.proxyLevel;
+    if (d.proxyGender) body.gender = d.proxyGender;
     try {
-      const r = await request('POST', '/api/activities/' + d.id + '/register-proxy', { nickname: name });
+      const r = await request('POST', '/api/activities/' + d.id + '/register-proxy', body);
       wx.showToast({ title: r.message, icon: 'none' });
-      this.setData({ proxyName: '' });
+      this.setData({ proxyName: '', proxyLevel: '', proxyGender: '' });
       this.load();
     } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
   },

@@ -40,9 +40,17 @@
     <view wx:else class="muted" style="padding:8rpx 0;">还没有人报名</view>
     <button wx:if="{{detail.confirmed.length}}" class="btn btn-ghost" style="margin-top:12rpx;" bindtap="exportRoster">复制名单(文本)</button>
     <!-- 代理追加（仅发起人） -->
-    <view wx:if="{{isCreator}}" class="row" style="margin-top:12rpx;align-items:center;">
-      <input class="input" style="flex:1;" placeholder="代理追加昵称" value="{{proxyName}}" bindinput="onProxyName" />
-      <button class="btn btn-ghost" style="margin-left:8rpx;font-size:24rpx;padding:8rpx 16rpx;" bindtap="proxyRegister">追加</button>
+    <view wx:if="{{isCreator}}" style="margin-top:12rpx;padding-top:12rpx;border-top:2rpx solid #f3f4f6;">
+      <view class="row" style="align-items:center;">
+        <input class="input" style="flex:1;" placeholder="昵称" value="{{proxyName}}" bindinput="onProxyName" />
+      </view>
+      <view class="row" style="margin-top:8rpx;align-items:center;">
+        <text class="muted" style="width:80rpx;font-size:24rpx;">水平</text>
+        <picker bindchange="onProxyLevel" value="{{['新手','初级','中级','高级'].indexOf(proxyLevel)}}" range="{{['新手','初级','中级','高级']}}" style="flex:1;"><view class="input" style="font-size:24rpx;">{{proxyLevel || '选填'}}</view></picker>
+        <text class="muted" style="width:80rpx;font-size:24rpx;margin-left:12rpx;">性别</text>
+        <picker bindchange="onProxyGender" value="{{['男','女','不公开'].indexOf(proxyGender)}}" range="{{['男','女','不公开']}}" style="flex:1;"><view class="input" style="font-size:24rpx;">{{proxyGender || '选填'}}</view></picker>
+      </view>
+      <button class="btn btn-primary" style="margin-top:8rpx;" bindtap="proxyRegister">代理追加</button>
     </view>
   </view>
 
