@@ -613,7 +613,7 @@ Page({
       }).then((info) => {
         const c = info.node;
         const ctx = c.getContext('2d');
-        const dpr = wx.getSystemInfoSync().pixelRatio;
+        const dpr = (wx.getDeviceInfo && wx.getDeviceInfo().pixelRatio) || wx.getSystemInfoSync().pixelRatio;
         c.width = info.width * dpr;
         c.height = info.height * dpr;
         ctx.scale(dpr, dpr);
