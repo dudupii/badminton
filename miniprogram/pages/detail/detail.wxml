@@ -42,15 +42,11 @@
     <!-- 代理追加（仅发起人） -->
     <view wx:if="{{isCreator}}" style="margin-top:12rpx;padding-top:12rpx;border-top:2rpx solid #f3f4f6;">
       <view class="row" style="align-items:center;">
-        <input class="input" style="flex:1;" placeholder="昵称" value="{{proxyName}}" bindinput="onProxyName" />
+        <input class="input" style="flex:1.5;font-size:24rpx;" placeholder="昵称" value="{{proxyName}}" bindinput="onProxyName" />
+        <picker bindchange="onProxyLevel" value="{{['新手','初级','中级','高级'].indexOf(proxyLevel)}}" range="{{['新手','初级','中级','高级']}}" style="flex:1;margin:0 6rpx;"><view class="input" style="font-size:24rpx;text-align:center;">{{proxyLevel || '水平'}}</view></picker>
+        <picker bindchange="onProxyGender" value="{{['男','女','不公开'].indexOf(proxyGender)}}" range="{{['男','女','不公开']}}" style="flex:1;"><view class="input" style="font-size:24rpx;text-align:center;">{{proxyGender || '性别'}}</view></picker>
+        <button class="btn btn-primary" style="margin-left:6rpx;font-size:22rpx;padding:8rpx 16rpx;" bindtap="proxyRegister">追加</button>
       </view>
-      <view class="row" style="margin-top:8rpx;align-items:center;">
-        <text class="muted" style="width:80rpx;font-size:24rpx;">水平</text>
-        <picker bindchange="onProxyLevel" value="{{['新手','初级','中级','高级'].indexOf(proxyLevel)}}" range="{{['新手','初级','中级','高级']}}" style="flex:1;"><view class="input" style="font-size:24rpx;">{{proxyLevel || '选填'}}</view></picker>
-        <text class="muted" style="width:80rpx;font-size:24rpx;margin-left:12rpx;">性别</text>
-        <picker bindchange="onProxyGender" value="{{['男','女','不公开'].indexOf(proxyGender)}}" range="{{['男','女','不公开']}}" style="flex:1;"><view class="input" style="font-size:24rpx;">{{proxyGender || '选填'}}</view></picker>
-      </view>
-      <button class="btn btn-primary" style="margin-top:8rpx;" bindtap="proxyRegister">代理追加</button>
     </view>
   </view>
 
