@@ -313,6 +313,7 @@ Page({
 
   async genRotation() {
     const d = this.data;
+    console.log('[diag] genRotation fixedPairs:', JSON.stringify(d.rotFixed));
     try {
       const r = await request('POST', '/api/activities/' + d.id + '/rotation', {
         courts: d.rotCourts,
