@@ -34,10 +34,16 @@
         <text wx:if="{{item.level}}" class="tag tag-level">{{item.level}}</text>
         <text wx:if="{{item.gender}}" class="tag tag-gender {{item.gender === '男' ? 'tg-male' : 'tg-female'}}">{{item.gender}}</text>
         <text wx:if="{{item.openid === detail.createdBy}}" class="tag tag-open">发起人</text>
+        <text wx:if="{{isCreator && item.openid !== detail.createdBy}}" class="tag tag-wait" data-openid="{{item.openid}}" data-name="{{item.nickname}}" bindtap="forceRemove" style="margin-left:8rpx;">移除</text>
       </view>
     </block>
     <view wx:else class="muted" style="padding:8rpx 0;">还没有人报名</view>
     <button wx:if="{{detail.confirmed.length}}" class="btn btn-ghost" style="margin-top:12rpx;" bindtap="exportRoster">复制名单(文本)</button>
+    <!-- 代理追加（仅发起人） -->
+    <view wx:if="{{isCreator}}" class="row" style="margin-top:12rpx;align-items:center;">
+      <input class="input" style="flex:1;" placeholder="代理追加昵称" value="{{proxyName}}" bindinput="onProxyName" />
+      <button class="btn btn-ghost" style="margin-left:8rpx;font-size:24rpx;padding:8rpx 16rpx;" bindtap="proxyRegister">追加</button>
+    </view>
   </view>
 
   <!-- waitlist -->
@@ -49,6 +55,7 @@
       <view wx:else class="avatar avatar-fallback">{{item.nickname ? item.nickname[0] : '?'}}</view>
       <text class="roster-name">{{item.no}}-{{item.nickname}}</text>
       <text class="muted">候补</text>
+      <text wx:if="{{isCreator}}" class="tag tag-wait" data-openid="{{item.openid}}" data-name="{{item.nickname}}" bindtap="forceRemove" style="margin-left:8rpx;">移除</text>
     </view>
   </view>
 

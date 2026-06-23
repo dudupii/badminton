@@ -969,6 +969,61 @@ async function sendReminders(store, activityId, templateId, { now }) {
   });
 }
 
+// Creator registers a guest by nickname (no login needed). Generates a stable
+// synthetic openid, ensures the user, and registers them.
+async function proxyRegister(store, activityId, actorOpenid, { nickname, level, gender }) {
+  const name = (nickname || '').trim();
+  if (!name) throw httpError(400, '请填写昵称');
+  return store.txn((state) => {
+    const a = state.activities[activityId];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    // Generate a stable synthetic openid for this guest
+    const openid = 'proxy_' + activityId.slice(-8) + '_' + Math.random().toString(36).slice(2, 8);
+    ensureUser(state, openid);
+    const u = state.users[openid];
+    u.nickname = name.slice(0, 32);
+    if (level && LEVELS.includes(level)) u.level = level;
+    if (gender && GENDERS.includes(gender)) u.gender = gender;
+    // inline register (can't call register() inside txn — it opens its own txn)
+    const regs = state.registrations.filter((r) => r.activityId === activityId);
+    const mine = regs.find((r) => r.openid === openid && r.status !== 'cancelled');
+    if (mine) throw httpError(409, '该用户已报名该活动');
+    const confirmedCount = regs.filter((r) => r.status === 'confirmed').length;
+    const status = confirmedCount < a.capacity ? 'confirmed' : 'waitlist';
+    const reg = { id: newId('reg_'), activityId, openid, status, createdAt: Date.now(), cancelledAt: null };
+    state.registrations.push(reg);
+    return { openid, nickname: name, status, message: status === 'confirmed' ? '代理报名成功！' : '名额已满，已加入候补。' };
+  });
+}
+
+// Creator forcibly removes someone's registration (like cancel but creator-initiated).
+async function forceRemove(store, activityId, actorOpenid, targetOpenid, now = Date.now()) {
+  return store.txn((state) => {
+    const a = state.activities[activityId];
+    if (!a) throw httpError(404, '活动不存在');
+    if (a.createdBy !== actorOpenid) throw httpError(403, '只有发起人可以操作');
+    const regs = state.registrations.filter((r) => r.activityId === activityId);
+    const mine = regs.find((r) => r.openid === targetOpenid && r.status !== 'cancelled');
+    if (!mine) throw httpError(404, '该用户未报名该活动');
+    const wasConfirmed = mine.status === 'confirmed';
+    mine.status = 'cancelled';
+    mine.cancelledAt = now;
+    let promoted = null;
+    if (wasConfirmed) {
+      const next = regs
+        .filter((r) => r.status === 'waitlist')
+        .sort((x, y) => x.createdAt - y.createdAt || (x.id < y.id ? -1 : 1))[0];
+      if (next) {
+        next.status = 'confirmed';
+        const u = state.users[next.openid] || {};
+        promoted = { openid: next.openid, nickname: u.nickname };
+      }
+    }
+    return { cancelled: true, promoted };
+  });
+}
+
 // All of a user's active registrations, joined with activity info.
 async function myRegistrations(store, openid) {
   const state = store.snapshot();
@@ -1056,4 +1111,6 @@ module.exports = {
   setCurrentRound,
   undoSession,
   setSessionCourts,
+  proxyRegister,
+  forceRemove,
 };

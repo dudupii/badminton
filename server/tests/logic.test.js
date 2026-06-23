@@ -852,6 +852,29 @@ test('setCurrentRound + undoSession + setSessionCourts', async () => {
   await withError(403, logic.setSessionCourts(store, act.id, 'stranger', 2));
 });
 
+test('proxyRegister: creator adds guest by nickname; forceRemove: creator kicks', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 2 }, 'org');
+  await logic.register(store, act.id, 'u1', 1000); // confirmed
+  // non-creator proxy → 403
+  await withError(403, logic.proxyRegister(store, act.id, 'stranger', { nickname: '嘉宾' }));
+  // creator adds guest
+  const g = await logic.proxyRegister(store, act.id, 'org', { nickname: '小王', level: '中级', gender: '男' });
+  assert.equal(g.status, 'confirmed');
+  assert.equal(g.nickname, '小王');
+  // now capacity 2/2 full → next proxy goes waitlist
+  const g2 = await logic.proxyRegister(store, act.id, 'org', { nickname: '小李' });
+  assert.equal(g2.status, 'waitlist');
+  // forceRemove non-creator → 403
+  await withError(403, logic.forceRemove(store, act.id, 'stranger', g.openid));
+  // creator kicks the confirmed guest → waitlister promotes
+  const removed = await logic.forceRemove(store, act.id, 'org', g.openid);
+  assert.equal(removed.cancelled, true);
+  assert.equal(removed.promoted.openid, g2.openid); // 小李 auto-promoted
+  // unknown target → 404
+  await withError(404, logic.forceRemove(store, act.id, 'org', 'ghost'));
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

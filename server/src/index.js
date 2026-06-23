@@ -317,6 +317,13 @@ app.post('/api/activities/:id/session/undo', requireAuth,
   wrap(async (req) => logic.undoSession(store, req.params.id, req.user.openid)));
 app.post('/api/activities/:id/session/courts', requireAuth,
   wrap(async (req) => logic.setSessionCourts(store, req.params.id, req.user.openid, req.body && req.body.courts)));
+
+// Proxy register (creator adds a guest by nickname) + force remove (creator kicks).
+app.post('/api/activities/:id/register-proxy', requireAuth,
+  wrap(async (req) => logic.proxyRegister(store, req.params.id, req.user.openid, req.body || {})));
+app.delete('/api/activities/:id/roster/:openid', requireAuth,
+  wrap(async (req) => logic.forceRemove(store, req.params.id, req.user.openid, req.params.openid)));
+
 app.get(
   '/api/activities/:id/session',
   optionalAuth,

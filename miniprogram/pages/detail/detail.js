@@ -10,6 +10,7 @@ Page({
     detail: null,
     qrcodeUrl: '',
     loading: true,
+    proxyName: '', // 代理追加昵称输入
     isCreator: false,
     canRegister: false,
     canCancel: false,
@@ -325,6 +326,32 @@ Page({
     } catch (e) {
       wx.showToast({ title: e.message, icon: 'none' });
     }
+  },
+  onProxyName(e) { this.setData({ proxyName: e.detail.value }); },
+  async proxyRegister() {
+    const d = this.data;
+    const name = (d.proxyName || '').trim();
+    if (!name) return wx.showToast({ title: '请填写昵称', icon: 'none' });
+    try {
+      const r = await request('POST', '/api/activities/' + d.id + '/register-proxy', { nickname: name });
+      wx.showToast({ title: r.message, icon: 'none' });
+      this.setData({ proxyName: '' });
+      this.load();
+    } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
+  },
+  async forceRemove(e) {
+    const { openid, name } = e.currentTarget.dataset;
+    const confirm = await new Promise((res) => {
+      wx.showModal({ title: '移除报名', content: '确定移除「' + (name || '') + '」吗？', confirmColor: '#dc2626', success: (m) => res(m.confirm) });
+    });
+    if (!confirm) return;
+    try {
+      const r = await request('DELETE', '/api/activities/' + this.data.id + '/roster/' + openid);
+      let msg = '已移除';
+      if (r.promoted) msg += '，候补「' + (r.promoted.nickname || '球友') + '」已上位';
+      wx.showToast({ title: msg, icon: 'none', duration: 2500 });
+      this.load();
+    } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
   },
   // 复制报名名单(正式+候补)为纯文本到剪贴板——只有号码+名字，不含性别/水平。
   exportRoster() {
