@@ -188,10 +188,10 @@
         <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="startSession">开始会话</button>
       </block>
       <block wx:else>
-        <view class="muted" style="margin-top:12rpx;font-size:24rpx;">第 {{detail.session.currentRound + 1}} 轮 · 勾选在场者后「排本轮」</view>
+        <view class="muted" style="margin-top:12rpx;font-size:24rpx;">第 {{detail.session.currentRound + 1}} 轮 · 点不在场/休息的人，再「排本轮」</view>
         <view class="row" style="margin-top:8rpx;flex-wrap:wrap;">
-          <view wx:for="{{detail.confirmed}}" wx:key="openid" data-openid="{{item.openid}}" bindtap="toggleSessPresent"
-                class="tag {{sessPresent[item.openid] ? 'tag-open' : 'tag-wait'}}" style="margin:6rpx 8rpx 0 0;">{{item.no}}-{{item.nickname}}</view>
+          <view wx:for="{{detail.confirmed}}" wx:key="openid" data-openid="{{item.openid}}" bindtap="toggleSessAbsent"
+                class="tag {{sessAbsent[item.openid] ? 'tag-closed' : 'tag-open'}}" style="margin:6rpx 8rpx 0 0;">{{item.no}}-{{item.nickname}}</view>
         </view>
         <button class="btn btn-primary" style="margin-top:16rpx;" bindtap="assignSession">排本轮</button>
         <button wx:if="{{detail.session}}" class="btn btn-danger" style="margin-top:8rpx;" bindtap="clearSession">结束会话</button>

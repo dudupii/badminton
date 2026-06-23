@@ -36,7 +36,7 @@ Page({
     sessCourts: 3,
     sessLevelMode: 'homogeneous',
     sessMatchFormat: 'any',
-    sessPresent: {},
+    sessAbsent: {}, // {openid: true} = 标记为不在场/休息；默认全在场
     sessStarted: false,
     sessFairness: '',
   },
@@ -438,18 +438,21 @@ Page({
       });
       const present = {};
       (d.detail.confirmed || []).forEach((p) => { present[p.openid] = true; });
-      this.setData({ detail: { ...d.detail, session: r.session }, sessPresent: present, sessStarted: true });
+      // 默认全在场（sessAbsent 为空 = 没人被标记不在）
+      this.setData({ detail: { ...d.detail, session: r.session }, sessAbsent: {}, sessStarted: true });
     } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
   },
-  toggleSessPresent(e) {
+  toggleSessAbsent(e) {
     const oid = e.currentTarget.dataset.openid;
-    const p = Object.assign({}, this.data.sessPresent);
-    p[oid] = !p[oid];
-    this.setData({ sessPresent: p });
+    const p = Object.assign({}, this.data.sessAbsent);
+    if (p[oid]) delete p[oid]; else p[oid] = true;
+    this.setData({ sessAbsent: p });
   },
   async assignSession() {
     const d = this.data;
-    const present = Object.keys(d.sessPresent).filter((k) => d.sessPresent[k]);
+    // 在场 = 全员减去标记为不在的人
+    const absent = new Set(Object.keys(d.sessAbsent).filter((k) => d.sessAbsent[k]));
+    const present = (d.detail.confirmed || []).map((x) => x.openid).filter((oid) => !absent.has(oid));
     try {
       const r = await request('POST', '/api/activities/' + d.id + '/session/assign', { present });
       this.setData({ detail: { ...d.detail, session: r.session } });
