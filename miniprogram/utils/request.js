@@ -39,7 +39,10 @@ async function request(method, path, data) {
     res = await rawRequest(method, path, data || {}, token);
   }
 
-  const body = res.data || {};
+  const body = res.data;
+  if (!body || typeof body !== 'object') {
+    throw new Error('服务器响应异常 (' + res.statusCode + ')');
+  }
   if (res.statusCode >= 400 || body.ok === false) {
     throw new Error(body.error || '请求失败 (' + res.statusCode + ')');
   }
