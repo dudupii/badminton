@@ -184,9 +184,45 @@ function assignOneRound(presentPlayers, { courts, levelMode, matchFormat, fixedP
   const forced = prevResters.length <= slots ? prevResters.slice() : pickFewestGames(prevResters, slots, games);
   const forcedSet = new Set(forced.map((p) => p.openid));
   const others = pool.filter((p) => !forcedSet.has(p.openid));
-  const playing = forced.concat(pickFewestGames(others, slots - forced.length, games));
-  const playingSet = new Set(playing.map((p) => p.openid));
-  const resters = pool.filter((p) => !playingSet.has(p.openid));
+  let playing = forced.concat(pickFewestGames(others, slots - forced.length, games));
+  let playingSet = new Set(playing.map((p) => p.openid));
+  let resters = pool.filter((p) => !playingSet.has(p.openid));
+
+  // Match-format swap: if the format needs a gender that's underrepresented in
+  // the playing set but available among resters, swap surplus-gender players
+  // (those with the most games) for the needed gender.
+  if (matchFormat && matchFormat !== 'any' && !extractFormatCourt(playing, matchFormat)) {
+    const playingMen = playing.filter((p) => p.gender === '男');
+    const playingWomen = playing.filter((p) => p.gender === '女');
+    const restWomen = resters.filter((p) => p.gender === '女');
+    const restMen = resters.filter((p) => p.gender === '男');
+    let needWomen = 0, needMen = 0;
+    if (matchFormat === 'womens') needWomen = Math.max(0, 4 - playingWomen.length);
+    else if (matchFormat === 'mens') needMen = Math.max(0, 4 - playingMen.length);
+    else if (matchFormat === 'mixed') {
+      needMen = Math.max(0, 2 - playingMen.length);
+      needWomen = Math.max(0, 2 - playingWomen.length);
+    }
+    needWomen = Math.min(needWomen, restWomen.length, playingMen.length);
+    needMen = Math.min(needMen, restMen.length, playingWomen.length);
+    if (needWomen > 0) {
+      const out = playingMen.sort((a, b) => games[b.openid] - games[a.openid]).slice(0, needWomen);
+      const inn = restWomen.slice(0, needWomen);
+      const outSet = new Set(out.map((p) => p.openid));
+      const inSet = new Set(inn.map((p) => p.openid));
+      playing = playing.filter((p) => !outSet.has(p.openid)).concat(inn);
+      resters = resters.filter((p) => !inSet.has(p.openid)).concat(out);
+    }
+    if (needMen > 0) {
+      const out = playingWomen.sort((a, b) => games[b.openid] - games[a.openid]).slice(0, needMen);
+      const inn = restMen.slice(0, needMen);
+      const outSet = new Set(out.map((p) => p.openid));
+      const inSet = new Set(inn.map((p) => p.openid));
+      playing = playing.filter((p) => !outSet.has(p.openid)).concat(inn);
+      resters = resters.filter((p) => !inSet.has(p.openid)).concat(out);
+    }
+  }
+
   const courtsArr = assignRotationCourts(playing, C, levelMode, fixedPairs || null, matchFormat);
   playing.forEach((p) => { games[p.openid]++; lastRest[p.openid] = false; });
   resters.forEach((p) => { lastRest[p.openid] = true; });
