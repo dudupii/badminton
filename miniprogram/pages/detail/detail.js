@@ -29,7 +29,7 @@ Page({
     rotRounds: 6,
     rotLevelMode: 'homogeneous',
     rotFixed: [], // [[openid,openid],…]
-    rotFixedFlat: [], // openids that are in some fixed pair (for wxml highlight)
+    rotFixedMap: {}, // {openid: pairNumber} for wxml highlight
     rotPairPick: null, // openid of first half-picked pair, or null
     rotMatchFormat: 'any', // any|mens|womens|mixed
     rotCurrentRound: 0,
@@ -521,14 +521,18 @@ Page({
     const existing = fixed.findIndex((pr) => pr[0] === oid || pr[1] === oid);
     if (existing >= 0) {
       fixed.splice(existing, 1);
-      this.setData({ rotFixed: fixed, rotFixedFlat: fixed.flat(), rotPairPick: null });
-      return;
+    } else {
+      const pick = this.data.rotPairPick;
+      if (!pick) { this.setData({ rotPairPick: oid, rotFixed: fixed, rotFixedMap: this._buildFixedMap(fixed) }); return; }
+      if (pick === oid) { this.setData({ rotPairPick: null, rotFixed: fixed, rotFixedMap: this._buildFixedMap(fixed) }); return; }
+      fixed.push([pick, oid]);
     }
-    const pick = this.data.rotPairPick;
-    if (!pick) { this.setData({ rotPairPick: oid }); return; }
-    if (pick === oid) { this.setData({ rotPairPick: null }); return; }
-    fixed.push([pick, oid]);
-    this.setData({ rotFixed: fixed, rotFixedFlat: fixed.flat(), rotPairPick: null });
+    this.setData({ rotFixed: fixed, rotFixedMap: this._buildFixedMap(fixed), rotPairPick: null });
+  },
+  _buildFixedMap(fixed) {
+    const m = {};
+    fixed.forEach((pair, i) => { m[pair[0]] = i + 1; m[pair[1]] = i + 1; });
+    return m;
   },
 
   async deleteActivity() {
