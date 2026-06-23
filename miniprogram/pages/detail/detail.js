@@ -6,6 +6,7 @@ const fmt = require('../../utils/format');
 Page({
   data: {
     id: '',
+    myCourtIndex: -1, // #2: which court the current user is on (-1 = not playing)
     scene: '', // invite code, present when opened by scanning the activity QR
     isScanEntry: false, // true when detail is the first page (QR scan entry)
     detail: null,
@@ -137,6 +138,7 @@ Page({
         rules: d.rules,
         sessStarted: !!(d.session && d.session.currentRound > 0),
         rotCurrentRound: d.rotation ? (d.rotation.currentRound || 0) : 0,
+        myCourtIndex: this._findMyCourt(d, me),
       });
 
       // Download QR to local temp file — real phone blocks <image src="http://...">
@@ -273,6 +275,30 @@ Page({
     } catch (e) {
       wx.showToast({ title: e.message, icon: 'none' });
     }
+  },
+  async batchAttend() {
+    const d = this.data;
+    const need = (d.detail.confirmed || []).filter((p) => p.attended !== true);
+    if (!need.length) return wx.showToast({ title: '已全部到场', icon: 'none' });
+    wx.showLoading({ title: '签到中' });
+    for (const p of need) {
+      try { await request('POST', '/api/activities/' + d.id + '/roster/' + p.openid + '/attend', { attended: true }); } catch (e) {}
+    }
+    wx.hideLoading();
+    wx.showToast({ title: '已全签到', icon: 'success' });
+    this.load();
+  },
+  async batchPaid() {
+    const d = this.data;
+    const need = (d.detail.confirmed || []).filter((p) => !p.paid);
+    if (!need.length) return wx.showToast({ title: '已全部付款', icon: 'none' });
+    wx.showLoading({ title: '标记中' });
+    for (const p of need) {
+      try { await request('POST', '/api/activities/' + d.id + '/roster/' + p.openid + '/paid', { paid: true }); } catch (e) {}
+    }
+    wx.hideLoading();
+    wx.showToast({ title: '已全标记付款', icon: 'success' });
+    this.load();
   },
   async toggleAttend(e) {
     const { openid, attended } = e.currentTarget.dataset;
@@ -553,6 +579,21 @@ Page({
     const m = {};
     fixed.forEach((pair, i) => { m[pair[0]] = i + 1; m[pair[1]] = i + 1; });
     return m;
+  },
+  // Find which court the current user is on in the current round (-1 = not playing).
+  _findMyCourt(detail, me) {
+    if (!detail || !me) return -1;
+    let courts = null;
+    if (detail.session && detail.session.currentRound > 0) {
+      const rd = detail.session.rounds[detail.session.currentRound - 1];
+      courts = rd ? rd.courts : null;
+    } else if (detail.rotation && detail.rotation.schedule) {
+      const cr = detail.rotation.currentRound || 0;
+      courts = detail.rotation.schedule[cr];
+    }
+    if (!courts) return -1;
+    const idx = courts.findIndex((c) => c.some((p) => p.openid === me));
+    return idx;
   },
 
   async deleteActivity() {

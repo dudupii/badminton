@@ -38,7 +38,7 @@ Page({
     try {
       const list = await request('GET', '/api/registrations/me');
       list.forEach((r) => {
-        r.timeText = fmt.dateTime(r.activity.startTime);
+        r.timeText = fmt.friendlyTime(r.activity.startTime);
       });
       this.setData({ regs: list, loading: false });
     } catch (e) {
@@ -50,7 +50,7 @@ Page({
     try {
       const list = await request('GET', '/api/activities/created-by/me');
       list.forEach((a) => {
-        a.timeText = fmt.dateTime(a.startTime);
+        a.timeText = fmt.friendlyTime(a.startTime);
       });
       this.setData({ myActs: list });
     } catch (e) {

@@ -88,6 +88,10 @@
     <view wx:if="{{feeSummary && feeSummary.totalOwedCents > 0}}" class="muted" style="margin-top:16rpx;">
       应收 ¥{{feeSummary.totalOwedCents/100}} · 已收 ¥{{feeSummary.totalPaidCents/100}} · {{feeSummary.settled?'已结清':'未结清'}}
     </view>
+    <view wx:if="{{detail.confirmed.length}}" class="row" style="margin-top:8rpx;">
+      <button class="btn btn-ghost" style="flex:1;margin:0 4rpx;font-size:22rpx;" bindtap="batchAttend">全到</button>
+      <button class="btn btn-ghost" style="flex:1;margin:0 4rpx;font-size:22rpx;" bindtap="batchPaid">全付</button>
+    </view>
     <block wx:if="{{detail.confirmed.length}}">
       <view class="roster-item" wx:for="{{detail.confirmed}}" wx:key="openid">
         <text class="roster-name">{{item.no}}-{{item.nickname}}</text>
@@ -152,7 +156,7 @@
           <button class="btn btn-ghost" style="padding:8rpx 24rpx;" bindtap="rotNext">▶</button>
         </view>
         <!-- 当前轮大字卡片 -->
-        <view wx:for="{{detail.rotation.schedule[rotCurrentRound]}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="background:#16a34a;border-radius:12rpx;padding:20rpx;margin-top:12rpx;">
+        <view wx:for="{{detail.rotation.schedule[rotCurrentRound]}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="background:{{myCourtIndex === ci ? '#f97316' : '#16a34a'}};border-radius:12rpx;padding:20rpx;margin-top:12rpx;">
           <text style="color:#fff;font-size:28rpx;font-weight:bold;">场{{ci+1}}</text>
           <text style="color:#fff;font-size:30rpx;margin-left:16rpx;">{{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
         </view>
@@ -235,7 +239,7 @@
     <!-- 逐轮动态（优先）：只显示当前轮 + 下一轮预览 -->
     <block wx:if="{{detail.session && detail.session.currentRound > 0}}">
       <view class="muted" style="margin-top:8rpx;font-weight:600;">第 {{detail.session.currentRound}} 轮 ▶</view>
-      <view wx:for="{{detail.session.rounds[detail.session.currentRound - 1].courts}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="background:#16a34a;border-radius:12rpx;padding:16rpx;margin-top:8rpx;">
+      <view wx:for="{{detail.session.rounds[detail.session.currentRound - 1].courts}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="background:{{myCourtIndex === ci ? '#f97316' : '#16a34a'}};border-radius:12rpx;padding:16rpx;margin-top:8rpx;">
         <text style="color:#fff;font-size:28rpx;">场{{ci+1}}: {{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
       </view>
       <!-- 下一轮预览（如果已排好） -->
@@ -249,7 +253,7 @@
     <!-- 轮转表（session 不活跃时才显示） -->
     <block wx:elif="{{detail.rotation}}">
       <view class="muted" style="margin-top:8rpx;font-weight:600;">第 {{(detail.rotation.currentRound || 0) + 1}} 轮 ▶</view>
-      <view wx:for="{{detail.rotation.schedule[detail.rotation.currentRound || 0]}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="background:#16a34a;border-radius:12rpx;padding:16rpx;margin-top:8rpx;">
+      <view wx:for="{{detail.rotation.schedule[detail.rotation.currentRound || 0]}}" wx:for-item="court" wx:for-index="ci" wx:key="index" style="background:{{myCourtIndex === ci ? '#f97316' : '#16a34a'}};border-radius:12rpx;padding:16rpx;margin-top:8rpx;">
         <text style="color:#fff;font-size:28rpx;">场{{ci+1}}: {{court[0].no}}-{{court[0].nickname}}{{court[1]?' / '+court[1].no+'-'+court[1].nickname:''}}{{court[2]?' / '+court[2].no+'-'+court[2].nickname:''}}{{court[3]?' / '+court[3].no+'-'+court[3].nickname:''}}</text>
       </view>
     </block>

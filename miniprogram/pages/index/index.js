@@ -30,7 +30,7 @@ Page({
       const activities = list
         .map((a) => ({
           ...a,
-          timeText: fmt.dateTime(a.startTime),
+          timeText: fmt.friendlyTime(a.startTime),
           fillText: a.confirmedCount + '/' + a.capacity,
           isFull: a.confirmedCount >= a.capacity,
           isPast: a.startTime && a.startTime < now,
