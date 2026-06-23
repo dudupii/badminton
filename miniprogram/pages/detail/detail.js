@@ -106,6 +106,7 @@ Page({
         id: d.id,
         detail: d,
         qrcodeUrl: BASE_URL + '/api/activities/' + d.id + '/qrcode',
+        qrcodeLocal: '', // local temp path for <image> (real phone blocks HTTP images)
         loading: false,
         isCreator: me === d.createdBy,
         isPast,
@@ -122,6 +123,17 @@ Page({
         rules: d.rules,
         sessStarted: !!(d.session && d.session.currentRound > 0),
         rotCurrentRound: d.rotation ? (d.rotation.currentRound || 0) : 0,
+      });
+
+      // Download QR to local temp file — real phone blocks <image src="http://...">
+      // even with "不校验合法域名" enabled. Local temp path renders everywhere.
+      const qrUrl = BASE_URL + '/api/activities/' + d.id + '/qrcode';
+      wx.downloadFile({
+        url: qrUrl,
+        success: (res) => {
+          if (res.statusCode === 200) this.setData({ qrcodeLocal: res.tempFilePath });
+        },
+        fail: () => { /* fall back to qrcodeUrl */ },
       });
     } catch (e) {
       this.setData({ loading: false });

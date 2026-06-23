@@ -232,7 +232,7 @@
     <view class="qr-wrap">
       <image
         class="qr-img"
-        src="{{qrcodeUrl}}"
+        src="{{qrcodeLocal || qrcodeUrl}}"
         mode="aspectFit"
         show-menu-by-longpress="{{true}}"
       />
