@@ -9,6 +9,7 @@ Page({
     levels: ['新手', '初级', '中级', '高级'],
     genders: ['男', '女', '不公开'],
     regs: [],
+    myActs: [],
     loading: true,
   },
 
@@ -18,7 +19,7 @@ Page({
     } catch (e) {
       wx.showToast({ title: '登录失败：' + e.message, icon: 'none' });
     }
-    await Promise.all([this.loadMe(), this.loadRegs()]);
+    await Promise.all([this.loadMe(), this.loadRegs(), this.loadMyActs()]);
   },
 
   async loadMe() {
@@ -42,6 +43,18 @@ Page({
       this.setData({ regs: list, loading: false });
     } catch (e) {
       this.setData({ loading: false });
+    }
+  },
+
+  async loadMyActs() {
+    try {
+      const list = await request('GET', '/api/activities/created-by/me');
+      list.forEach((a) => {
+        a.timeText = fmt.dateTime(a.startTime);
+      });
+      this.setData({ myActs: list });
+    } catch (e) {
+      /* ignore */
     }
   },
 

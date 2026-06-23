@@ -63,4 +63,26 @@
   </block>
 
   <view wx:elif="{{!loading}}" class="empty">还没有报名任何活动</view>
+
+  <!-- my activities (created by me) -->
+  <view class="section-title" style="margin:24rpx 8rpx 16rpx;">我的活动</view>
+
+  <block wx:if="{{myActs.length}}">
+    <view
+      class="card"
+      wx:for="{{myActs}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="goDetail"
+    >
+      <view class="row between">
+        <text class="title-md">{{item.title}}</text>
+        <text class="tag tag-open" wx:if="{{item.status === 'open'}}">报名中</text>
+        <text class="tag tag-closed" wx:else>已关闭</text>
+      </view>
+      <view class="muted" style="margin-top:10rpx;">⏰ {{item.timeText}}</view>
+    </view>
+  </block>
+
+  <view wx:elif="{{!loading}}" class="empty">还没有创建任何活动</view>
 </view>
