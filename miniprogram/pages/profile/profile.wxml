@@ -34,6 +34,14 @@
     </view>
   </view>
 
+  <!-- 球友群入口 -->
+  <view class="card" bindtap="goClubs" style="margin-bottom:16rpx;">
+    <view class="row between">
+      <text class="title-md">球友群</text>
+      <text class="muted">管理 ›</text>
+    </view>
+  </view>
+
   <!-- 出勤统计入口 -->
   <view class="card" bindtap="goStats" style="margin-bottom:16rpx;">
     <view class="row between">

@@ -4,7 +4,8 @@
     "pages/detail/detail",
     "pages/create/create",
     "pages/profile/profile",
-    "pages/stats/stats"
+    "pages/stats/stats",
+    "pages/clubs/clubs"
   ],
   "window": {
     "navigationBarTitleText": "羽众不同",

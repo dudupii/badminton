@@ -290,6 +290,7 @@ function publicActivity(a) {
     createdBy: a.createdBy,
     createdAt: a.createdAt,
     status: a.status, // 'open' | 'closed'
+    clubId: a.clubId || null,
     fee: a.fee || null,
     rules: a.rules || null,
     rotation: a.rotation || null,
@@ -403,6 +404,7 @@ async function createActivity(store, input, creatorOpenid, now = Date.now()) {
       createdBy: creatorOpenid,
       createdAt: now,
       status: 'open',
+      clubId: input.clubId || null,
       rules,
     };
     state.activities[activity.id] = activity;
@@ -437,9 +439,11 @@ async function createRecurring(store, input, creatorOpenid, { count, stepDays })
   return created;
 }
 
-async function listActivities(store) {
+function listActivities(store, opts) {
   const state = store.snapshot();
-  return Object.values(state.activities)
+  let acts = Object.values(state.activities);
+  if (opts && opts.clubId) acts = acts.filter((a) => a.clubId === opts.clubId);
+  return acts
     .map((a) => enrichActivity(state, a))
     .sort((a, b) => a.startTime - b.startTime);
 }
@@ -1073,6 +1077,67 @@ function attendanceStats(store, organizerOpenid) {
     .sort((a, b) => b.attended - a.attended || b.confirmed - a.confirmed);
 }
 
+function genClubCode(state) {
+  const existing = new Set(Object.values(state.clubs).map((c) => c.code));
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const bytes = crypto.randomBytes(6);
+    let s = '';
+    for (let i = 0; i < 6; i++) s += CODE_CHARS[bytes[i] % CODE_CHARS.length];
+    if (!existing.has(s)) return s;
+  }
+  return CODE_CHARS.slice(0, 6);
+}
+
+async function createClub(store, creatorOpenid, { name }) {
+  const n = (name || '').trim();
+  if (!n) throw httpError(400, '请填写群名称');
+  return store.txn((state) => {
+    const club = {
+      id: newId('club_'),
+      name: n.slice(0, 32),
+      code: genClubCode(state),
+      createdBy: creatorOpenid,
+      members: [creatorOpenid],
+      createdAt: Date.now(),
+    };
+    state.clubs[club.id] = club;
+    return { id: club.id, name: club.name, code: club.code, createdBy: club.createdBy, members: club.members.slice() };
+  });
+}
+
+async function joinClub(store, openid, code) {
+  return store.txn((state) => {
+    const club = Object.values(state.clubs).find((c) => c.code === code);
+    if (!club) throw httpError(404, '邀请码无效');
+    if (!club.members.includes(openid)) club.members.push(openid);
+    return { id: club.id, name: club.name, code: club.code, members: club.members.slice() };
+  });
+}
+
+function listMyClubs(store, openid) {
+  const state = store.snapshot();
+  return Object.values(state.clubs)
+    .filter((c) => c.members.includes(openid))
+    .map((c) => ({ id: c.id, name: c.name, code: c.code, members: c.members.slice() }));
+}
+
+async function getClub(store, id) {
+  const state = store.snapshot();
+  const c = state.clubs[id];
+  if (!c) throw httpError(404, '群不存在');
+  return { id: c.id, name: c.name, code: c.code, createdBy: c.createdBy, members: c.members.slice() };
+}
+
+async function deleteClub(store, actorOpenid, id) {
+  return store.txn((state) => {
+    const c = state.clubs[id];
+    if (!c) throw httpError(404, '群不存在');
+    if (c.createdBy !== actorOpenid) throw httpError(403, '只有创建者可以删除');
+    delete state.clubs[id];
+    return { deleted: true };
+  });
+}
+
 module.exports = {
   httpError,
   toMs,
@@ -1113,4 +1178,9 @@ module.exports = {
   setSessionCourts,
   proxyRegister,
   forceRemove,
+  createClub,
+  joinClub,
+  listMyClubs,
+  getClub,
+  deleteClub,
 };

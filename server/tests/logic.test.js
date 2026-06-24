@@ -875,6 +875,45 @@ test('proxyRegister: creator adds guest by nickname; forceRemove: creator kicks'
   await withError(404, logic.forceRemove(store, act.id, 'org', 'ghost'));
 });
 
+test('club CRUD: create, join, list, get, delete', async () => {
+  const store = tmpStore();
+  const c = await logic.createClub(store, 'org', { name: '奥体周三群' });
+  assert.ok(c.id);
+  assert.equal(c.name, '奥体周三群');
+  assert.match(c.code, /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$/, '6-char code');
+  assert.deepEqual(c.members, ['org']);
+  assert.equal(c.createdBy, 'org');
+  const joined = await logic.joinClub(store, 'u1', c.code);
+  assert.deepEqual(joined.members, ['org', 'u1']);
+  await withError(404, logic.joinClub(store, 'u2', 'NOPE01'));
+  const mine = await logic.listMyClubs(store, 'org');
+  assert.equal(mine.length, 1);
+  assert.equal(mine[0].name, '奥体周三群');
+  const u1clubs = await logic.listMyClubs(store, 'u1');
+  assert.equal(u1clubs.length, 1);
+  assert.equal((await logic.listMyClubs(store, 'stranger')).length, 0);
+  const detail = await logic.getClub(store, c.id);
+  assert.equal(detail.name, '奥体周三群');
+  assert.equal(detail.members.length, 2);
+  await withError(403, logic.deleteClub(store, 'u1', c.id));
+  await logic.deleteClub(store, 'org', c.id);
+  await withError(404, logic.getClub(store, c.id));
+});
+
+test('activity clubId: create with club + list filter', async () => {
+  const store = tmpStore();
+  const club = await logic.createClub(store, 'org', { name: '群A' });
+  const a = await logic.createActivity(store, { title: '群内活动', startTime: '2099-01-01T10:00:00', capacity: 4, clubId: club.id }, 'org');
+  assert.equal(a.clubId, club.id);
+  const b = await logic.createActivity(store, { title: '全局活动', startTime: '2099-02-01T10:00:00', capacity: 4 }, 'org');
+  assert.equal(b.clubId, null);
+  const clubActs = logic.listActivities(store, { clubId: club.id });
+  assert.equal(clubActs.length, 1);
+  assert.equal(clubActs[0].title, '群内活动');
+  const all = logic.listActivities(store);
+  assert.equal(all.length, 2);
+});
+
 test('token sign/verify round-trips and rejects tampering', async () => {
   // Load auth after setting a known secret via env is tricky here; verify
   // functional correctness through the exported module using current config.

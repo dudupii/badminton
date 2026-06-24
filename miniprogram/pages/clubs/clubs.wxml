@@ -1,0 +1,50 @@
+<view class="container">
+  <!-- 群列表 -->
+  <view class="section-title" style="margin:8rpx 8rpx 16rpx;">我的球友群</view>
+
+  <block wx:if="{{clubs.length}}">
+    <view class="card" wx:for="{{clubs}}" wx:key="id" style="margin-bottom:8rpx;">
+      <view class="row between">
+        <text class="title-md" data-id="{{item.id}}" bindtap="openClub">{{item.name}}</text>
+        <text class="muted">{{item.members.length}}人</text>
+      </view>
+      <view class="row between" style="margin-top:8rpx;">
+        <text class="muted" style="font-size:22rpx;">邀请码: {{item.code}}</text>
+        <view class="row">
+          <text class="tag tag-level" data-code="{{item.code}}" bindtap="copyCode" style="font-size:22rpx;margin-right:8rpx;">复制</text>
+          <text class="tag tag-wait" data-id="{{item.id}}" bindtap="deleteClub" style="font-size:22rpx;">删除</text>
+        </view>
+      </view>
+    </view>
+  </block>
+  <view wx:elif="{{!loading}}" class="empty">还没有加入任何群</view>
+
+  <!-- 建群 / 加群 -->
+  <view class="card" style="margin-top:8rpx;">
+    <view class="row" style="align-items:center;">
+      <input class="input" style="flex:1;" placeholder="群名称" value="{{newName}}" bindinput="onNewName" />
+      <button class="btn btn-ghost" style="margin-left:8rpx;font-size:22rpx;padding:8rpx 16rpx;" bindtap="createClub">建群</button>
+    </view>
+    <view class="row" style="margin-top:8rpx;align-items:center;">
+      <input class="input" style="flex:1;" placeholder="邀请码" value="{{joinCode}}" bindinput="onJoinCode" />
+      <button class="btn btn-ghost" style="margin-left:8rpx;font-size:22rpx;padding:8rpx 16rpx;" bindtap="joinClub">加群</button>
+    </view>
+  </view>
+</view>
+
+<!-- 群内活动弹层 -->
+<view wx:if="{{selectedClub}}" class="club-modal-mask" bindtap="closeClub">
+  <view class="club-modal" catchtap="">
+    <view class="row between" style="margin-bottom:16rpx;">
+      <text class="title-md">{{selectedClub.name}}（{{selectedClub.members.length}}人）</text>
+      <text class="muted" bindtap="closeClub">关闭</text>
+    </view>
+    <block wx:if="{{clubActs.length}}">
+      <view class="card" wx:for="{{clubActs}}" wx:key="id" data-id="{{item.id}}" bindtap="goDetail" style="margin-bottom:8rpx;">
+        <text class="title-md">{{item.title}}</text>
+        <view class="muted" style="margin-top:6rpx;">{{item.confirmedCount}}/{{item.capacity}}</view>
+      </view>
+    </block>
+    <view wx:else class="muted" style="padding:16rpx 0;text-align:center;">群内还没有活动</view>
+  </view>
+</view>

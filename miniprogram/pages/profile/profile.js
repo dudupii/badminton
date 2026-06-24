@@ -108,6 +108,9 @@ Page({
   goDetail(e) {
     wx.navigateTo({ url: '/pages/detail/detail?id=' + e.currentTarget.dataset.id });
   },
+  goClubs() {
+    wx.navigateTo({ url: '/pages/clubs/clubs' });
+  },
 
   goStats() {
     wx.navigateTo({ url: '/pages/stats/stats' });

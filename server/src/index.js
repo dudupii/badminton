@@ -120,8 +120,20 @@ app.post(
   })
 );
 
+// --- clubs ------------------------------------------------------------------
+app.post('/api/clubs', requireAuth,
+  wrap(async (req) => logic.createClub(store, req.user.openid, req.body || {})));
+app.get('/api/clubs/mine', requireAuth,
+  wrap(async (req) => logic.listMyClubs(store, req.user.openid)));
+app.post('/api/clubs/:code/join', requireAuth,
+  wrap(async (req) => logic.joinClub(store, req.user.openid, req.params.code)));
+app.get('/api/clubs/:id', requireAuth,
+  wrap(async (req) => logic.getClub(store, req.params.id)));
+app.delete('/api/clubs/:id', requireAuth,
+  wrap(async (req) => logic.deleteClub(store, req.user.openid, req.params.id)));
+
 // --- activities -------------------------------------------------------------
-app.get('/api/activities', wrap(async () => logic.listActivities(store)));
+app.get('/api/activities', wrap(async (req) => logic.listActivities(store, req.query && req.query.clubId ? { clubId: req.query.clubId } : null)));
 
 app.post(
   '/api/activities',

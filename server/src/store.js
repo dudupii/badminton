@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DEFAULT_STATE = { users: {}, activities: {}, registrations: [] };
+const DEFAULT_STATE = { users: {}, activities: {}, registrations: [], clubs: {} };
 
 class Store {
   constructor(filePath) {
@@ -26,6 +26,7 @@ class Store {
         users: parsed.users || {},
         activities: parsed.activities || {},
         registrations: Array.isArray(parsed.registrations) ? parsed.registrations : [],
+        clubs: parsed.clubs || {},
       };
     } catch (e) {
       return structuredClone(DEFAULT_STATE);
