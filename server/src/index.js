@@ -131,6 +131,8 @@ app.get('/api/clubs/:id', requireAuth,
   wrap(async (req) => logic.getClub(store, req.params.id)));
 app.delete('/api/clubs/:id', requireAuth,
   wrap(async (req) => logic.deleteClub(store, req.user.openid, req.params.id)));
+app.post('/api/clubs/:id/leave', requireAuth,
+  wrap(async (req) => logic.leaveClub(store, req.user.openid, req.params.id)));
 
 // --- activities -------------------------------------------------------------
 app.get('/api/activities', wrap(async (req) => logic.listActivities(store, req.query && req.query.clubId ? { clubId: req.query.clubId } : null)));

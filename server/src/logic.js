@@ -1138,6 +1138,17 @@ async function deleteClub(store, actorOpenid, id) {
   });
 }
 
+// Leave a club (remove self from members). Creator cannot leave (must delete).
+async function leaveClub(store, openid, id) {
+  return store.txn((state) => {
+    const c = state.clubs[id];
+    if (!c) throw httpError(404, '群不存在');
+    if (c.createdBy === openid) throw httpError(400, '创建者请使用删除群');
+    c.members = c.members.filter((m) => m !== openid);
+    return { left: true };
+  });
+}
+
 module.exports = {
   httpError,
   toMs,
@@ -1183,4 +1194,5 @@ module.exports = {
   listMyClubs,
   getClub,
   deleteClub,
+  leaveClub,
 };

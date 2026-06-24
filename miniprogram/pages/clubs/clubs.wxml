@@ -12,7 +12,8 @@
         <text class="muted" style="font-size:22rpx;">邀请码: {{item.code}}</text>
         <view class="row">
           <text class="tag tag-level" data-code="{{item.code}}" bindtap="copyCode" style="font-size:22rpx;margin-right:8rpx;">复制</text>
-          <text class="tag tag-wait" data-id="{{item.id}}" bindtap="deleteClub" style="font-size:22rpx;">删除</text>
+          <text class="tag tag-wait" data-id="{{item.id}}" bindtap="leaveClub" style="font-size:22rpx;">退群</text>
+          <text class="tag tag-closed" data-id="{{item.id}}" bindtap="deleteClub" style="font-size:22rpx;margin-left:8rpx;" hidden="{{item.createdBy !== item.members[0]}}">删除</text>
         </view>
       </view>
     </view>

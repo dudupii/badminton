@@ -74,6 +74,19 @@ Page({
     wx.navigateTo({ url: '/pages/detail/detail?id=' + id });
   },
 
+  async leaveClub(e) {
+    const id = e.currentTarget.dataset.id;
+    const confirm = await new Promise((res) => {
+      wx.showModal({ title: '退群', content: '确定退出该群？', confirmColor: '#dc2626', success: (m) => res(m.confirm) });
+    });
+    if (!confirm) return;
+    try {
+      await request('POST', '/api/clubs/' + id + '/leave');
+      this.loadClubs();
+      wx.showToast({ title: '已退群', icon: 'success' });
+    } catch (e) { wx.showToast({ title: e.message, icon: 'none' }); }
+  },
+
   async deleteClub(e) {
     const id = e.currentTarget.dataset.id;
     const confirm = await new Promise((res) => {
