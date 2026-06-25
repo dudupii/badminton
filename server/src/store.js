@@ -19,8 +19,7 @@ class Store {
   }
 
   _read() {
-    try {
-      const raw = fs.readFileSync(this.filePath, 'utf8');
+    const parse = (raw) => {
       const parsed = JSON.parse(raw);
       return {
         users: parsed.users || {},
@@ -28,8 +27,19 @@ class Store {
         registrations: Array.isArray(parsed.registrations) ? parsed.registrations : [],
         clubs: parsed.clubs || {},
       };
+    };
+    try {
+      return parse(fs.readFileSync(this.filePath, 'utf8'));
     } catch (e) {
-      return structuredClone(DEFAULT_STATE);
+      // Primary missing/corrupt — try the newest backup before silently resetting.
+      try {
+        const recovered = parse(fs.readFileSync(`${this.filePath}.bak.1`, 'utf8'));
+        console.error(`⚠️  ${this.filePath} 读取失败（${e.message}），已从 .bak.1 恢复。请人工检查！`);
+        return recovered;
+      } catch (e2) {
+        console.error(`⚠️  ${this.filePath} 与 .bak.1 均不可用，以空状态启动：${e2.message}`);
+        return structuredClone(DEFAULT_STATE);
+      }
     }
   }
 

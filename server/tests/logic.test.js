@@ -979,3 +979,20 @@ test('backup(keep < 1) is a no-op returning false', async () => {
   assert.equal(result, false);
   assert.ok(!fs.existsSync(store.filePath + '.bak.1'), 'no backup should be written when keep < 1');
 });
+
+test('Store recovers from .bak.1 when primary db is corrupt', async () => {
+  const store = tmpStore();
+  await logic.createActivity(store, { title: 'survivor', startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', 1000);
+  store.backup(10);
+  fs.writeFileSync(store.filePath, '{ NOT JSON'); // corrupt primary
+  const recovered = new Store(store.filePath);
+  const titles = Object.values(recovered.snapshot().activities).map((a) => a.title);
+  assert.deepEqual(titles, ['survivor']);
+});
+
+test('Store starts empty when primary and backup are both unusable', async () => {
+  const store = tmpStore();
+  fs.writeFileSync(store.filePath, '{ NOT JSON'); // no backup exists
+  const s = new Store(store.filePath);
+  assert.deepEqual(s.snapshot().activities, {});
+});
