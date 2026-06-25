@@ -1,4 +1,10 @@
 <view class="container">
+  <view class="feed-tabs">
+    <view class="feed-tab {{feedMode === 'relevant' ? 'on' : ''}}" data-mode="relevant" bindtap="switchFeed">我相关的</view>
+    <view class="feed-tab {{feedMode === 'all' ? 'on' : ''}}" data-mode="all" bindtap="switchFeed">全部</view>
+  </view>
+  <view wx:if="{{fellBack}}" class="feed-note">暂时没有与你相关的活动，以下是全部即将开始的</view>
+
   <block wx:if="{{activities.length}}">
     <view
       class="card {{item.isPast ? 'dim' : ''}}"
