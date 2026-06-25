@@ -56,6 +56,23 @@ class Store {
   snapshot() {
     return this.state;
   }
+
+  // Rotate the in-memory state into `<file>.bak.1 .. .bak.<keep>`. Newest is
+  // always .bak.1. Writes a tmp file + rename (atomic). Backs up the in-memory
+  // state directly so a backup is always valid JSON regardless of disk state.
+  backup(keep = 10) {
+    if (keep < 1) return false;
+    const oldest = `${this.filePath}.bak.${keep}`;
+    if (fs.existsSync(oldest)) fs.unlinkSync(oldest);
+    for (let i = keep - 1; i >= 1; i--) {
+      const from = `${this.filePath}.bak.${i}`;
+      if (fs.existsSync(from)) fs.renameSync(from, `${this.filePath}.bak.${i + 1}`);
+    }
+    const tmp = `${this.filePath}.bak.1.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(this.state, null, 2));
+    fs.renameSync(tmp, `${this.filePath}.bak.1`);
+    return true;
+  }
 }
 
 function newId(prefix) {

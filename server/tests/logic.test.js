@@ -923,3 +923,59 @@ test('token sign/verify round-trips and rejects tampering', async () => {
   assert.equal(verify(t + 'x'), null);
   assert.equal(verify('garbage'), null);
 });
+
+test('backup writes .bak.1 of the current in-memory state', async () => {
+  const store = tmpStore();
+  await logic.createActivity(store, { title: 'first', startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', 1000);
+  store.backup(10);
+  const bak = JSON.parse(fs.readFileSync(store.filePath + '.bak.1', 'utf8'));
+  assert.equal(Object.keys(bak.activities).length, 1);
+  assert.equal(Object.values(bak.activities)[0].title, 'first');
+});
+
+test('backup rotates older backups (.bak.1 -> .bak.2)', async () => {
+  const store = tmpStore();
+  await logic.createActivity(store, { title: 'a', startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', 1000);
+  store.backup(10);
+  await logic.createActivity(store, { title: 'b', startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', 2000);
+  store.backup(10);
+  const bak1 = JSON.parse(fs.readFileSync(store.filePath + '.bak.1', 'utf8'));
+  const bak2 = JSON.parse(fs.readFileSync(store.filePath + '.bak.2', 'utf8'));
+  assert.equal(Object.keys(bak1.activities).length, 2); // newest
+  assert.equal(Object.keys(bak2.activities).length, 1); // previous
+  assert.equal(Object.values(bak2.activities)[0].title, 'a');
+});
+
+test('backup prunes to the keep limit (full rotation chain)', async () => {
+  const store = tmpStore();
+  const keep = 3;
+  for (let i = 0; i < keep + 1; i++) {
+    await logic.createActivity(store, { title: 'a' + i, startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', 1000 + i);
+    store.backup(keep);
+  }
+  for (let i = 1; i <= keep; i++) {
+    assert.ok(fs.existsSync(store.filePath + '.bak.' + i), '.bak.' + i + ' should exist');
+  }
+  assert.ok(!fs.existsSync(store.filePath + '.bak.' + (keep + 1)), '.bak.' + (keep + 1) + ' should NOT exist');
+  // With keep+1 = 4 incremental backups (titles a0..a3), each backup captures
+  // the cumulative in-memory state at that point. Rotation shifts older copies
+  // down and unlinks .bak.<keep> before writing .bak.1. Final chain:
+  //   .bak.1 = a0+a1+a2+a3 (4 acts, newest)
+  //   .bak.2 = a0+a1+a2     (3 acts)
+  //   .bak.3 = a0+a1         (2 acts, oldest surviving — pruned from 3→2 across the chain)
+  const newest = JSON.parse(fs.readFileSync(store.filePath + '.bak.1', 'utf8'));
+  assert.equal(Object.keys(newest.activities).length, keep + 1);
+  const oldest = JSON.parse(fs.readFileSync(store.filePath + '.bak.' + keep, 'utf8'));
+  assert.equal(Object.keys(oldest.activities).length, keep - 1);
+  // oldest surviving snapshot contains the earliest activities
+  const oldestTitles = Object.values(oldest.activities).map(a => a.title).sort();
+  assert.deepEqual(oldestTitles, ['a0', 'a1']);
+});
+
+test('backup(keep < 1) is a no-op returning false', async () => {
+  const store = tmpStore();
+  await logic.createActivity(store, { title: 'x', startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', 1000);
+  const result = store.backup(0);
+  assert.equal(result, false);
+  assert.ok(!fs.existsSync(store.filePath + '.bak.1'), 'no backup should be written when keep < 1');
+});
