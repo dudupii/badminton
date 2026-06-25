@@ -923,3 +923,71 @@ test('token sign/verify round-trips and rejects tampering', async () => {
   assert.equal(verify(t + 'x'), null);
   assert.equal(verify('garbage'), null);
 });
+
+test('feed: relevant = mine ∪ my clubs ∪ organizers I registered with', async () => {
+  const store = tmpStore();
+  const now = Date.parse('2026-06-25T13:00:00');
+  const today = Date.parse('2026-06-25T18:00:00'); // 今天未来
+
+  const mine = await logic.createActivity(store, { title: '我建的', startTime: today, capacity: 8 }, 'me', now);
+
+  // 我的群
+  const club = await logic.createClub(store, 'someone', { name: '球友群' });
+  await logic.joinClub(store, 'me', club.code);
+  const inClub = await logic.createActivity(store, { title: '群里的', startTime: today, capacity: 8, clubId: club.id }, 'someone', now);
+
+  // 报名 orgX 的一场 → orgX 进相关集；orgX 的另一场（没报名）也应出现
+  const orgXold = await logic.createActivity(store, { title: 'orgX 老', startTime: today, capacity: 8 }, 'orgX', now);
+  await logic.register(store, orgXold.id, 'me', now);
+  const orgXnew = await logic.createActivity(store, { title: 'orgX 新', startTime: today, capacity: 8 }, 'orgX', now);
+
+  // 陌生组织者 orgY，非我的群
+  const stranger = await logic.createActivity(store, { title: '陌生', startTime: today, capacity: 8 }, 'orgY', now);
+
+  const rel = await logic.listFeed(store, 'me', { mode: 'relevant', now });
+  const relIds = rel.map((a) => a.id);
+  assert.ok(relIds.includes(mine.id), 'includes mine');
+  assert.ok(relIds.includes(inClub.id), 'includes my club');
+  assert.ok(relIds.includes(orgXnew.id), 'includes organizer I registered with');
+  assert.ok(!relIds.includes(stranger.id), 'excludes stranger');
+
+  const allIds = (await logic.listFeed(store, 'me', { mode: 'all', now })).map((a) => a.id);
+  assert.ok(allIds.includes(stranger.id), 'mode=all includes stranger');
+});
+
+test('feed: time window is start-of-today and future (both modes)', async () => {
+  const store = tmpStore();
+  const now = Date.parse('2026-06-25T13:00:00');
+  const aMid = await logic.createActivity(store, { title: '今天0点', startTime: Date.parse('2026-06-25T00:00:00'), capacity: 8 }, 'me', now);
+  const aStarted = await logic.createActivity(store, { title: '今天已开始', startTime: Date.parse('2026-06-25T08:00:00'), capacity: 8 }, 'me', now);
+  const aFuture = await logic.createActivity(store, { title: '今天未来', startTime: Date.parse('2026-06-25T18:00:00'), capacity: 8 }, 'me', now);
+  const aYest = await logic.createActivity(store, { title: '昨天', startTime: Date.parse('2026-06-24T18:00:00'), capacity: 8 }, 'me', now);
+
+  const relIds = (await logic.listFeed(store, 'me', { mode: 'relevant', now })).map((a) => a.id);
+  assert.ok(relIds.includes(aMid.id), 'includes start-of-today boundary (inclusive)');
+  assert.ok(relIds.includes(aStarted.id));
+  assert.ok(relIds.includes(aFuture.id));
+  assert.ok(!relIds.includes(aYest.id), 'excludes yesterday');
+
+  const allIds = (await logic.listFeed(store, 'me', { mode: 'all', now })).map((a) => a.id);
+  assert.ok(!allIds.includes(aYest.id), 'mode=all also excludes yesterday');
+  assert.equal(allIds.length, 3);
+});
+
+test('feed: cancelled registration does not make organizer relevant', async () => {
+  const store = tmpStore();
+  const now = Date.parse('2026-06-25T13:00:00');
+  const today = Date.parse('2026-06-25T18:00:00');
+
+  const orgZold = await logic.createActivity(store, { title: 'orgZ 老', startTime: today, capacity: 8 }, 'orgZ', now);
+  await logic.register(store, orgZold.id, 'me', now);
+  await logic.cancel(store, orgZold.id, 'me', now + 1000);
+  const orgZnew = await logic.createActivity(store, { title: 'orgZ 新', startTime: today, capacity: 8 }, 'orgZ', now);
+
+  const relIds = (await logic.listFeed(store, 'me', { mode: 'relevant', now })).map((a) => a.id);
+  assert.ok(!relIds.includes(orgZnew.id), 'cancelled organizer not relevant');
+  assert.ok(!relIds.includes(orgZold.id));
+
+  const allIds = (await logic.listFeed(store, 'me', { mode: 'all', now })).map((a) => a.id);
+  assert.ok(allIds.includes(orgZnew.id), 'mode=all still shows it');
+});
