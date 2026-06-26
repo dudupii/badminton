@@ -12,7 +12,7 @@ const { newId } = require('./store');
 const CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
 // User-selectable level / gender tags (kept in sync with the profile pickers).
-const LEVELS = ['新手', '初级', '中级', '高级'];
+const LEVELS = ['新手', '入门', '初级', '中级', '中高级', '高级'];
 const GENDERS = ['男', '女', '不公开'];
 
 // Abuse-prevention limits (public release). Module constants so logic stays
@@ -74,9 +74,9 @@ function perPersonOwedCents(fee, poolSize) {
   return 0;
 }
 
-const LEVEL_WEIGHT = { 新手: 1, 初级: 2, 中级: 3, 高级: 4 };
+const LEVEL_WEIGHT = { 新手: 1, 入门: 2, 初级: 3, 中级: 4, 中高级: 5, 高级: 6 };
 function levelWeight(level) {
-  return LEVEL_WEIGHT[level] || 2; // 未知水平按初级(2) 算
+  return LEVEL_WEIGHT[level] || 2; // 未知水平按入门(2) 算
 }
 
 // Pure: split a confirmed roster into balanced groups (snake draft by level)

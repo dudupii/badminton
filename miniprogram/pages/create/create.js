@@ -1,4 +1,5 @@
 const { request } = require('../../utils/request');
+const { LEVELS, LEVEL_DESC } = require('../../utils/levels');
 
 function pad(n) {
   return n < 10 ? '0' + n : '' + n;
@@ -29,11 +30,12 @@ Page({
     repeatOptions: ['不重复', '每天', '每周', '自定义'],
     repeatCount: 4, // how many sessions when repeating
     customStep: 7, // days between sessions when 自定义
-    levelOptions: ['新手', '初级', '中级', '高级'],
+    levelOptions: LEVELS,
     ruleNoShow: false,
     ruleNoShowDays: 7,
     ruleLevelMode: 'off', // 'off' | 'whitelist' | 'min'
     ruleMinLevel: '中级',
+    ruleMinLevelDesc: '',
     ruleGender: false,
     ruleGenders: [],
     ruleCancelDeadline: '', // hours (string while editing)
@@ -79,6 +81,7 @@ Page({
         ruleCancelDeadline: a.rules.cancelDeadlineHours ? String(a.rules.cancelDeadlineHours) : '',
         ruleLevelMode: a.rules.minLevel ? 'min' : (Array.isArray(a.rules.allowedLevels) && a.rules.allowedLevels.length ? 'whitelist' : 'off'),
         ruleMinLevel: a.rules.minLevel || '中级',
+        ruleMinLevelDesc: LEVEL_DESC[a.rules.minLevel || '中级'] || '',
         ruleLevels: (a.rules.allowedLevels || []).slice(),
         ruleGender: Array.isArray(a.rules.allowedGenders) && a.rules.allowedGenders.length > 0,
         ruleGenders: (a.rules.allowedGenders || []).slice(),
@@ -200,7 +203,8 @@ Page({
     this.setData({ ruleLevelMode: ['off', 'whitelist', 'min'][idx] || 'off' });
   },
   onRuleMinLevelChange(e) {
-    this.setData({ ruleMinLevel: this.data.levelOptions[e.detail.value] });
+    const lv = this.data.levelOptions[e.detail.value];
+    this.setData({ ruleMinLevel: lv, ruleMinLevelDesc: LEVEL_DESC[lv] || '' });
   },
   onRuleCancelDeadline(e) {
     this.setData({ ruleCancelDeadline: e.detail.value });

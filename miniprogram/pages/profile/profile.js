@@ -2,11 +2,13 @@ const { request } = require('../../utils/request');
 const { ensureLogin } = require('../../utils/auth');
 const { BASE_URL } = require('../../utils/config');
 const fmt = require('../../utils/format');
+const { LEVELS, LEVEL_DESC } = require('../../utils/levels');
 
 Page({
   data: {
     user: { nickname: '', avatarUrl: '', level: '', gender: '' },
-    levels: ['新手', '初级', '中级', '高级'],
+    levels: LEVELS,
+    levelDesc: '',
     genders: ['男', '女', '不公开'],
     regs: [],
     myActs: [],
@@ -27,7 +29,7 @@ Page({
       const u = await request('GET', '/api/user/me');
       // avatars are stored server-relative; resolve for <image> display
       if (u.avatarUrl && u.avatarUrl.startsWith('/')) u.avatarUrl = BASE_URL + u.avatarUrl;
-      this.setData({ user: u });
+      this.setData({ user: u, levelDesc: LEVEL_DESC[u.level] || '' });
       getApp().globalData.userInfo = u;
     } catch (e) {
       /* ignore */
@@ -83,7 +85,8 @@ Page({
   },
 
   onLevelChange(e) {
-    this.setData({ 'user.level': this.data.levels[e.detail.value] });
+    const level = this.data.levels[e.detail.value];
+    this.setData({ 'user.level': level, levelDesc: LEVEL_DESC[level] || '' });
     this.saveProfile();
   },
   onGenderChange(e) {
