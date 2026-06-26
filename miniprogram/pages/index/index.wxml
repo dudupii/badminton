@@ -3,7 +3,6 @@
     <view class="feed-tab {{feedMode === 'relevant' ? 'on' : ''}}" data-mode="relevant" bindtap="switchFeed">我相关的</view>
     <view class="feed-tab {{feedMode === 'all' ? 'on' : ''}}" data-mode="all" bindtap="switchFeed">全部</view>
   </view>
-  <view wx:if="{{fellBack}}" class="feed-note">暂时没有与你相关的活动，以下是全部即将开始的</view>
 
   <block wx:if="{{activities.length}}">
     <view
@@ -40,7 +39,8 @@
   </block>
 
   <view wx:elif="{{!loading}}" class="empty">
-    还没有活动，点右下角 + 发起一场吧
+    <text wx:if="{{feedMode === 'relevant'}}">暂无与你相关的活动，看看「全部」</text>
+    <text wx:else>还没有活动，点右下角 + 发起一场吧</text>
   </view>
 </view>
 

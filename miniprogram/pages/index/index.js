@@ -7,7 +7,6 @@ Page({
     activities: [],
     loading: true,
     feedMode: 'relevant', // 'relevant' | 'all'
-    fellBack: false,      // relevant 为空 → 正在显示 all
   },
 
   async onShow() {
@@ -27,20 +26,14 @@ Page({
   async switchFeed(e) {
     const feedMode = e.currentTarget.dataset.mode;
     if (feedMode === this.data.feedMode) return;
-    this.setData({ feedMode, fellBack: false });
+    this.setData({ feedMode });
     await this.load();
   },
 
   async load() {
     try {
       this.setData({ loading: true });
-      let list = await request('GET', '/api/activities/feed?mode=' + this.data.feedMode);
-      let fellBack = false;
-      // 相关为空 → 自动回退全部，避免新用户/冷启动空白。
-      if (this.data.feedMode === 'relevant' && list.length === 0) {
-        list = await request('GET', '/api/activities/feed?mode=all');
-        fellBack = list.length > 0;
-      }
+      const list = await request('GET', '/api/activities/feed?mode=' + this.data.feedMode);
       const now = Date.now();
       const activities = list
         .map((a) => ({
@@ -55,7 +48,7 @@ Page({
           if (x.isPast !== y.isPast) return x.isPast ? 1 : -1;
           return x.isPast ? y.startTime - x.startTime : x.startTime - y.startTime;
         });
-      this.setData({ activities, loading: false, fellBack });
+      this.setData({ activities, loading: false });
     } catch (e) {
       this.setData({ loading: false });
       wx.showToast({ title: e.message, icon: 'none' });
