@@ -120,6 +120,7 @@
           <view class="input" style="flex:1;">{{ruleMinLevel}}</view>
         </picker>
       </view>
+      <view wx:if="{{ruleLevelMode==='min' && ruleMinLevelDesc}}" class="muted" style="margin-top:6rpx;font-size:22rpx;">{{ruleMinLevelDesc}} 及以上可报名</view>
 
       <view class="row" style="margin-top:16rpx;align-items:center;">
         <switch checked="{{ruleGender}}" bindchange="toggleRuleGender" color="#16a34a"/>
