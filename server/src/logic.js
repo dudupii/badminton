@@ -1110,17 +1110,23 @@ function genClubCode(state) {
   return CODE_CHARS.slice(0, 6);
 }
 
-async function createClub(store, creatorOpenid, { name }) {
+async function createClub(store, creatorOpenid, { name }, now = Date.now()) {
   const n = (name || '').trim();
   if (!n) throw httpError(400, '请填写群名称');
   return store.txn((state) => {
+    const recentClubs = Object.values(state.clubs).filter(
+      (c) => c.createdBy === creatorOpenid && c.createdAt > now - LIMITS.clubWindowMs
+    ).length;
+    if (recentClubs >= LIMITS.clubWindowMax) {
+      throw httpError(429, '近期创建群过多，请稍后再试');
+    }
     const club = {
       id: newId('club_'),
       name: n.slice(0, 32),
       code: genClubCode(state),
       createdBy: creatorOpenid,
       members: [creatorOpenid],
-      createdAt: Date.now(),
+      createdAt: now,
     };
     state.clubs[club.id] = club;
     return { id: club.id, name: club.name, code: club.code, createdBy: club.createdBy, members: club.members.slice() };
@@ -1131,7 +1137,10 @@ async function joinClub(store, openid, code) {
   return store.txn((state) => {
     const club = Object.values(state.clubs).find((c) => c.code === code);
     if (!club) throw httpError(404, '邀请码无效');
-    if (!club.members.includes(openid)) club.members.push(openid);
+    if (!club.members.includes(openid)) {
+      if (club.members.length >= LIMITS.clubMemberMax) throw httpError(400, '该群人数已满');
+      club.members.push(openid);
+    }
     return { id: club.id, name: club.name, code: club.code, members: club.members.slice() };
   });
 }

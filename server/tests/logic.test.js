@@ -1085,3 +1085,22 @@ test('createActivity rate limit is per-creator (other users unaffected)', async 
   const other = await logic.createActivity(store, { title: 'other', startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org2', base);
   assert.ok(other.id);
 });
+
+test('createClub rate-limits too many per user within the window', async () => {
+  const store = tmpStore();
+  const base = 1000;
+  for (let i = 0; i < logic.LIMITS.clubWindowMax; i++) {
+    await logic.createClub(store, 'org', { name: 'g' + i }, base + i);
+  }
+  await withError(429, logic.createClub(store, 'org', { name: 'over' }, base + 10));
+});
+
+test('joinClub caps total members', async () => {
+  const store = tmpStore();
+  const club = await logic.createClub(store, 'org', { name: 'g' }, 1000);
+  // creator is already a member; fill to the cap with distinct openids
+  for (let i = 0; i < logic.LIMITS.clubMemberMax - 1; i++) {
+    await logic.joinClub(store, 'u' + i, club.code);
+  }
+  await withError(400, logic.joinClub(store, 'extra', club.code));
+});
