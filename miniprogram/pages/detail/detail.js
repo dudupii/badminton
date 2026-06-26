@@ -2,6 +2,7 @@ const { request } = require('../../utils/request');
 const { ensureLogin } = require('../../utils/auth');
 const { BASE_URL, SUBSCRIBE_TEMPLATES } = require('../../utils/config');
 const fmt = require('../../utils/format');
+const { LEVELS } = require('../../utils/levels');
 
 Page({
   data: {
@@ -14,6 +15,7 @@ Page({
     loading: true,
     proxyName: '', // 代理追加昵称输入
     proxyLevel: '', // 代理追加水平
+    levelOptions: LEVELS,
     proxyGender: '', // 代理追加性别
     isCreator: false,
     canRegister: false,
@@ -372,7 +374,7 @@ Page({
     }
   },
   onProxyName(e) { this.setData({ proxyName: e.detail.value }); },
-  onProxyLevel(e) { this.setData({ proxyLevel: ['新手','初级','中级','高级'][Number(e.detail.value)] || '' }); },
+  onProxyLevel(e) { this.setData({ proxyLevel: LEVELS[Number(e.detail.value)] || '' }); },
   onProxyGender(e) { this.setData({ proxyGender: ['男','女','不公开'][Number(e.detail.value)] || '' }); },
   async proxyRegister() {
     const d = this.data;

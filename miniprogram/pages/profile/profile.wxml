@@ -26,6 +26,7 @@
         <view class="picker-val">{{user.level || '请选择'}}</view>
       </picker>
     </view>
+    <view wx:if="{{levelDesc}}" class="muted" style="font-size:22rpx;padding:4rpx 0 8rpx 16rpx;">{{levelDesc}}</view>
     <view class="field-row">
       <view class="field-label">性别</view>
       <picker bindchange="onGenderChange" value="{{genders.indexOf(user.gender)}}" range="{{genders}}">
