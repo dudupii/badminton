@@ -161,6 +161,15 @@ app.get(
 );
 
 app.get(
+  '/api/activities/feed',
+  requireAuth,
+  wrap(async (req) => {
+    const mode = req.query && req.query.mode === 'all' ? 'all' : 'relevant';
+    return logic.listFeed(store, req.user.openid, { mode });
+  })
+);
+
+app.get(
   '/api/activities/:id',
   optionalAuth,
   wrap(async (req) => logic.getActivity(store, req.params.id, req.user && req.user.openid))

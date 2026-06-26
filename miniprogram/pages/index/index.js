@@ -6,6 +6,7 @@ Page({
   data: {
     activities: [],
     loading: true,
+    feedMode: 'relevant', // 'relevant' | 'all'
   },
 
   async onShow() {
@@ -22,10 +23,17 @@ Page({
     wx.stopPullDownRefresh();
   },
 
+  async switchFeed(e) {
+    const feedMode = e.currentTarget.dataset.mode;
+    if (feedMode === this.data.feedMode) return;
+    this.setData({ feedMode });
+    await this.load();
+  },
+
   async load() {
     try {
       this.setData({ loading: true });
-      const list = await request('GET', '/api/activities');
+      const list = await request('GET', '/api/activities/feed?mode=' + this.data.feedMode);
       const now = Date.now();
       const activities = list
         .map((a) => ({
@@ -36,7 +44,7 @@ Page({
           isPast: a.startTime && a.startTime < now,
         }))
         .sort((x, y) => {
-          // Upcoming activities first (earliest soonest), expired ones last.
+          // 即将开始优先（最早最前），已结束沉底。
           if (x.isPast !== y.isPast) return x.isPast ? 1 : -1;
           return x.isPast ? y.startTime - x.startTime : x.startTime - y.startTime;
         });

@@ -1,4 +1,9 @@
 <view class="container">
+  <view class="feed-tabs">
+    <view class="feed-tab {{feedMode === 'relevant' ? 'on' : ''}}" data-mode="relevant" bindtap="switchFeed">我相关的</view>
+    <view class="feed-tab {{feedMode === 'all' ? 'on' : ''}}" data-mode="all" bindtap="switchFeed">全部</view>
+  </view>
+
   <block wx:if="{{activities.length}}">
     <view
       class="card {{item.isPast ? 'dim' : ''}}"
@@ -34,7 +39,8 @@
   </block>
 
   <view wx:elif="{{!loading}}" class="empty">
-    还没有活动，点右下角 + 发起一场吧
+    <text wx:if="{{feedMode === 'relevant'}}">暂无与你相关的活动，看看「全部」</text>
+    <text wx:else>还没有活动，点右下角 + 发起一场吧</text>
   </view>
 </view>
 

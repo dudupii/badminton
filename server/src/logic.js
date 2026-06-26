@@ -470,6 +470,36 @@ function listActivities(store, opts) {
     .sort((a, b) => a.startTime - b.startTime);
 }
 
+// Relevance feed for the home screen: "today or future" activities that are
+// mine, in my clubs, or by an organizer I've registered with. mode='all' drops
+// the relevance filter but keeps the time window. `now` is injectable for tests.
+async function listFeed(store, openid, { mode = 'relevant', now = Date.now() } = {}) {
+  const state = store.snapshot();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const cutoff = startOfToday.getTime();
+
+  const myClubIds = new Set(
+    Object.values(state.clubs).filter((c) => c.members.includes(openid)).map((c) => c.id)
+  );
+  const myRegOrgs = new Set(
+    state.registrations
+      .filter((r) => r.openid === openid && r.status !== 'cancelled') // 报过名就算（取消不算）
+      .map((r) => state.activities[r.activityId] && state.activities[r.activityId].createdBy)
+      .filter(Boolean)
+  );
+
+  const isRelevant = (a) =>
+    a.createdBy === openid || myClubIds.has(a.clubId) || myRegOrgs.has(a.createdBy);
+  const isTodayOrFuture = (a) => a.startTime >= cutoff;
+
+  return Object.values(state.activities)
+    .filter(isTodayOrFuture)
+    .filter((a) => (mode === 'all' ? true : isRelevant(a)))
+    .map((a) => enrichActivity(state, a))
+    .sort((a, b) => a.startTime - b.startTime);
+}
+
 async function getActivity(store, id, viewerOpenid) {
   const state = store.snapshot();
   const a = state.activities[id];
@@ -1194,6 +1224,7 @@ module.exports = {
   createActivity,
   createRecurring,
   listActivities,
+  listFeed,
   getActivity,
   getActivityByCode,
   setActivityStatus,
