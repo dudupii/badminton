@@ -31,13 +31,21 @@ class Store {
     try {
       return parse(fs.readFileSync(this.filePath, 'utf8'));
     } catch (e) {
-      // Primary missing/corrupt — try the newest backup before silently resetting.
+      const primaryMissing = e.code === 'ENOENT';
       try {
         const recovered = parse(fs.readFileSync(`${this.filePath}.bak.1`, 'utf8'));
-        console.error(`⚠️  ${this.filePath} 读取失败（${e.message}），已从 .bak.1 恢复。请人工检查！`);
+        // Primary unreadable but a backup exists — restore from it.
+        console.error(primaryMissing
+          ? `ℹ️  ${this.filePath} 不存在，已从 .bak.1 恢复。`
+          : `⚠️  ${this.filePath} 损坏（${e.message}），已从 .bak.1 恢复。请人工检查！`);
         return recovered;
       } catch (e2) {
-        console.error(`⚠️  ${this.filePath} 与 .bak.1 均不可用，以空状态启动：${e2.message}`);
+        if (primaryMissing) {
+          // Normal first boot / fresh start: no primary, no backup — start empty quietly.
+          return structuredClone(DEFAULT_STATE);
+        }
+        // Primary EXISTS but is corrupt AND no usable backup — real data-loss risk.
+        console.error(`⚠️  ${this.filePath} 损坏且无可用备份，以空状态启动：${e2.message}`);
         return structuredClone(DEFAULT_STATE);
       }
     }

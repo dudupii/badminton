@@ -997,6 +997,21 @@ test('Store starts empty when primary and backup are both unusable', async () =>
   assert.deepEqual(s.snapshot().activities, {});
 });
 
+test('Store starts silently empty on first boot (no db, no backup)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bm-quiet-'));
+  const file = path.join(dir, 'db.json'); // never created, never backed up
+  const warns = [];
+  const orig = console.error;
+  console.error = (...args) => warns.push(args.join(' '));
+  try {
+    const s = new Store(file);
+    assert.deepEqual(s.snapshot().activities, {});
+    assert.equal(warns.length, 0, 'first boot should NOT log a warning');
+  } finally {
+    console.error = orig;
+  }
+});
+
 test('createActivity rejects an over-long title', async () => {
   const store = tmpStore();
   await withError(400, logic.createActivity(store, {
