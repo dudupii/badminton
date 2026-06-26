@@ -12,6 +12,9 @@ const logic = require('./logic');
 
 const store = new Store(config.dataFile);
 const app = express();
+app.disable('etag'); // 真机微信会缓存 GET 并带 If-None-Match 回来 → 304 空 body，
+                     // 小程序 request 工具处理不了 304 会抛错(列表空白)。关掉 ETag，
+                     // 接口一律回 200 带 body。仿真器不受影响（它不发 If-None-Match）。
 
 // Uploaded avatars land here (local-file storage backend; swap to COS/S3 for
 // production scale). Created on first upload.
