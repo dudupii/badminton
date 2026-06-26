@@ -1061,3 +1061,27 @@ test('createRecurring can exceed activityWindowMax without a 429', async () => {
   assert.ok(Array.isArray(res), 'createRecurring should return an array');
   assert.equal(res.length, 12);
 });
+
+test('createActivity rate-limits too many per creator within the window', async () => {
+  const store = tmpStore();
+  const base = 1000;
+  for (let i = 0; i < logic.LIMITS.activityWindowMax; i++) {
+    await logic.createActivity(store, { title: 't' + i, startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', base + i);
+  }
+  // next one still inside the 1h window -> 429
+  await withError(429, logic.createActivity(store, { title: 'over', startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', base + 10));
+  // push `now` past the window -> the earliest ones age out -> allowed again
+  const ok = await logic.createActivity(store, { title: 'ok', startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', base + logic.LIMITS.activityWindowMs + 11);
+  assert.ok(ok.id);
+});
+
+test('createActivity rate limit is per-creator (other users unaffected)', async () => {
+  const store = tmpStore();
+  const base = 5000;
+  for (let i = 0; i < logic.LIMITS.activityWindowMax; i++) {
+    await logic.createActivity(store, { title: 't' + i, startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org', base + i);
+  }
+  // different creator under the limit -> fine
+  const other = await logic.createActivity(store, { title: 'other', startTime: '2099-01-01T10:00:00', capacity: 1 }, 'org2', base);
+  assert.ok(other.id);
+});
