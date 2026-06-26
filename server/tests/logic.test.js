@@ -1104,3 +1104,23 @@ test('joinClub caps total members', async () => {
   }
   await withError(400, logic.joinClub(store, 'extra', club.code));
 });
+
+test('createActivity truncates an over-long location', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, {
+    title: 'ok',
+    location: 'L'.repeat(logic.LIMITS.locationMax + 20),
+    startTime: '2099-01-01T10:00:00',
+    capacity: 1,
+  }, 'org', 1000);
+  const d = await logic.getActivity(store, act.id);
+  assert.equal(d.location.length, logic.LIMITS.locationMax);
+});
+
+test('updateActivity truncates an over-long location', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'orig', startTime: '2099-01-01T10:00:00', capacity: 2 }, 'org', 1000);
+  await logic.updateActivity(store, act.id, 'org', { location: 'M'.repeat(logic.LIMITS.locationMax + 30) });
+  const d = await logic.getActivity(store, act.id);
+  assert.equal(d.location.length, logic.LIMITS.locationMax);
+});

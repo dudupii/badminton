@@ -20,6 +20,7 @@ const GENDERS = ['男', '女', '不公开'];
 const LIMITS = {
   titleMax: 60,
   descriptionMax: 500,
+  locationMax: 120,
   activityWindowMs: 3600000, // 1h
   activityWindowMax: 10, // per creator per window
   clubWindowMs: 86400000, // 24h
@@ -418,7 +419,7 @@ async function createActivity(store, input, creatorOpenid, now = Date.now(), opt
       code: genCode(state),
       title,
       description: (input.description || '').trim().slice(0, LIMITS.descriptionMax),
-      location: (input.location || '').trim(),
+      location: (input.location || '').trim().slice(0, LIMITS.locationMax),
       startTime,
       endTime,
       capacity,
@@ -602,7 +603,7 @@ async function updateActivity(store, id, actorOpenid, input) {
 
     if (title !== undefined) a.title = title;
     if (input.description !== undefined) a.description = (input.description || '').trim().slice(0, LIMITS.descriptionMax);
-    if (input.location !== undefined) a.location = (input.location || '').trim();
+    if (input.location !== undefined) a.location = (input.location || '').trim().slice(0, LIMITS.locationMax);
     if (startTime !== undefined) a.startTime = startTime;
     if (endTime !== undefined) a.endTime = endTime;
     if (capacity !== undefined) a.capacity = capacity;
