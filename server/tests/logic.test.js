@@ -434,8 +434,8 @@ test('generateGroups: snake-draft balances level across N groups', () => {
   assert.equal(groups.length, 2);
   assert.deepEqual(groups[0].map((x) => x.openid), ['a', 'd', 'e']);
   assert.deepEqual(groups[1].map((x) => x.openid), ['b', 'c', 'f']);
-  assert.equal(groups[0].reduce((s, x) => s + x.weight, 0), 9);
-  assert.equal(groups[1].reduce((s, x) => s + x.weight, 0), 9);
+  assert.equal(groups[0].reduce((s, x) => s + x.weight, 0), 13);
+  assert.equal(groups[1].reduce((s, x) => s + x.weight, 0), 13);
 });
 
 test('generateGroups: pairs mode pairs strong with weak', () => {
@@ -454,8 +454,31 @@ test('generateGroups: pairs mode pairs strong with weak', () => {
 test('generateGroups: empty level defaults to weight 2', () => {
   const confirmed = [{ openid: 'a', level: '' }, { openid: 'b', level: '高级' }];
   const pairs = logic.generateGroups(confirmed, { mode: 'pairs' });
-  assert.equal(pairs[0][0].weight, 4);
+  assert.equal(pairs[0][0].weight, 6);
   assert.equal(pairs[0][1].weight, 2);
+});
+
+test('levelWeight: 6 levels map to weights 1-6', () => {
+  const levels = ['新手', '入门', '初级', '中级', '中高级', '高级'];
+  const confirmed = levels.map((lv, i) => ({ openid: 'u' + i, level: lv }));
+  const out = logic.generateGroups(confirmed, { mode: 'pairs' });
+  const w = {};
+  out.flat().forEach((p) => { w[p.level] = p.weight; });
+  assert.equal(w['新手'], 1);
+  assert.equal(w['入门'], 2);
+  assert.equal(w['初级'], 3);
+  assert.equal(w['中级'], 4);
+  assert.equal(w['中高级'], 5);
+  assert.equal(w['高级'], 6);
+});
+
+test('validateRules accepts the 2 new levels (入门 / 中高级)', async () => {
+  const store = tmpStore();
+  const base = { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4 };
+  const a = await logic.createActivity(store, { ...base, rules: { minLevel: '中高级' } }, 'org');
+  assert.equal(a.rules.minLevel, '中高级');
+  const b = await logic.createActivity(store, { ...base, rules: { allowedLevels: ['入门', '初级'] } }, 'org');
+  assert.deepEqual(b.rules.allowedLevels, ['入门', '初级']);
 });
 
 test('attendanceStats aggregates confirmed/attended/noShow across organizer activities', async () => {
