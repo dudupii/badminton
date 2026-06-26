@@ -53,6 +53,12 @@ const config = {
       remind: process.env.WX_REMIND_TPL || '', // 活动开始前提醒
     },
   },
+
+  // Rotating db.json backups. Always on (useful in dev too). Tune via env.
+  backup: {
+    intervalMs: (Number(process.env.BACKUP_INTERVAL_SECONDS) || 3600) * 1000,
+    keep: Number(process.env.BACKUP_KEEP) || 10,
+  },
 };
 
 // always-available helper for tests / callers

@@ -479,6 +479,16 @@ if (require.main === module) {
   // Kick the reminder sweep periodically (and once shortly after boot).
   setInterval(reminderSweep, REMIND_INTERVAL_MS).unref();
   setTimeout(reminderSweep, 10000).unref();
+  // Periodic rotating backup of db.json (always on, unlike the reminder sweep).
+  const backup = () => {
+    try {
+      store.backup(config.backup.keep);
+    } catch (e) {
+      console.error('backup failed:', e.message);
+    }
+  };
+  setInterval(backup, config.backup.intervalMs).unref();
+  setTimeout(backup, 30000).unref(); // capture initial state shortly after boot
 }
 
 module.exports = { app, store, logic };
