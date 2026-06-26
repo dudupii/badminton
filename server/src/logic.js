@@ -15,6 +15,18 @@ const CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 const LEVELS = ['新手', '初级', '中级', '高级'];
 const GENDERS = ['男', '女', '不公开'];
 
+// Abuse-prevention limits (public release). Module constants so logic stays
+// pure/testable; promote to env later if tuning-without-redeploy is needed.
+const LIMITS = {
+  titleMax: 60,
+  descriptionMax: 500,
+  activityWindowMs: 3600000, // 1h
+  activityWindowMax: 10, // per creator per window
+  clubWindowMs: 86400000, // 24h
+  clubWindowMax: 20, // per user per window
+  clubMemberMax: 200,
+};
+
 // Normalize + validate an optional activity-rules input. Returns the active
 // rule subset or null. Level restriction has two mutually exclusive modes:
 // allowedLevels (whitelist) vs minLevel (that level and above).
@@ -384,6 +396,7 @@ async function consumeSubscription(store, openid, templateId) {
 async function createActivity(store, input, creatorOpenid, now = Date.now()) {
   const title = (input.title || '').trim();
   if (!title) throw httpError(400, '请填写活动标题');
+  if (title.length > LIMITS.titleMax) throw httpError(400, `标题过长（最多 ${LIMITS.titleMax} 字）`);
   const capacity = Number(input.capacity);
   if (!Number.isInteger(capacity) || capacity < 1) throw httpError(400, '名额需为大于 0 的整数');
   const startTime = toMs(input.startTime);
@@ -392,11 +405,17 @@ async function createActivity(store, input, creatorOpenid, now = Date.now()) {
   const rules = validateRules(input.rules);
 
   return store.txn((state) => {
+    const recentActivities = Object.values(state.activities).filter(
+      (x) => x.createdBy === creatorOpenid && x.createdAt > now - LIMITS.activityWindowMs
+    ).length;
+    if (recentActivities >= LIMITS.activityWindowMax) {
+      throw httpError(429, '近期创建活动过多，请稍后再试');
+    }
     const activity = {
       id: newId('act_'),
       code: genCode(state),
       title,
-      description: (input.description || '').trim(),
+      description: (input.description || '').trim().slice(0, LIMITS.descriptionMax),
       location: (input.location || '').trim(),
       startTime,
       endTime,
@@ -1151,6 +1170,7 @@ async function leaveClub(store, openid, id) {
 
 module.exports = {
   httpError,
+  LIMITS,
   toMs,
   ensureUser,
   ensureUserExists,

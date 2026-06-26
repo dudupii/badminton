@@ -996,3 +996,24 @@ test('Store starts empty when primary and backup are both unusable', async () =>
   const s = new Store(store.filePath);
   assert.deepEqual(s.snapshot().activities, {});
 });
+
+test('createActivity rejects an over-long title', async () => {
+  const store = tmpStore();
+  await withError(400, logic.createActivity(store, {
+    title: 'x'.repeat(logic.LIMITS.titleMax + 1),
+    startTime: '2099-01-01T10:00:00',
+    capacity: 1,
+  }, 'org', 1000));
+});
+
+test('createActivity truncates an over-long description', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, {
+    title: 'ok',
+    description: 'y'.repeat(logic.LIMITS.descriptionMax + 50),
+    startTime: '2099-01-01T10:00:00',
+    capacity: 1,
+  }, 'org', 1000);
+  const d = await logic.getActivity(store, act.id);
+  assert.equal(d.description.length, logic.LIMITS.descriptionMax);
+});
