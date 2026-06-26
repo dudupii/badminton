@@ -1017,3 +1017,32 @@ test('createActivity truncates an over-long description', async () => {
   const d = await logic.getActivity(store, act.id);
   assert.equal(d.description.length, logic.LIMITS.descriptionMax);
 });
+
+test('updateActivity rejects an over-long title', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'orig', startTime: '2099-01-01T10:00:00', capacity: 2 }, 'org', 1000);
+  await withError(400, logic.updateActivity(store, act.id, 'org', {
+    title: 'x'.repeat(logic.LIMITS.titleMax + 1),
+  }));
+});
+
+test('updateActivity truncates an over-long description', async () => {
+  const store = tmpStore();
+  const act = await logic.createActivity(store, { title: 'orig', startTime: '2099-01-01T10:00:00', capacity: 2 }, 'org', 1000);
+  await logic.updateActivity(store, act.id, 'org', { description: 'z'.repeat(logic.LIMITS.descriptionMax + 30) });
+  const d = await logic.getActivity(store, act.id);
+  assert.equal(d.description.length, logic.LIMITS.descriptionMax);
+});
+
+test('createRecurring can exceed activityWindowMax without a 429', async () => {
+  const store = tmpStore();
+  // count=12 > activityWindowMax(10); must NOT throw 429 because recurring is one action.
+  const res = await logic.createRecurring(
+    store,
+    { title: 'weekly', startTime: '2099-01-01T10:00:00', capacity: 4 },
+    'org',
+    { count: 12, stepDays: 7 }
+  );
+  assert.ok(Array.isArray(res), 'createRecurring should return an array');
+  assert.equal(res.length, 12);
+});

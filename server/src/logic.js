@@ -393,7 +393,7 @@ async function consumeSubscription(store, openid, templateId) {
 
 // ---- activities ------------------------------------------------------------
 
-async function createActivity(store, input, creatorOpenid, now = Date.now()) {
+async function createActivity(store, input, creatorOpenid, now = Date.now(), opts = {}) {
   const title = (input.title || '').trim();
   if (!title) throw httpError(400, '请填写活动标题');
   if (title.length > LIMITS.titleMax) throw httpError(400, `标题过长（最多 ${LIMITS.titleMax} 字）`);
@@ -405,11 +405,13 @@ async function createActivity(store, input, creatorOpenid, now = Date.now()) {
   const rules = validateRules(input.rules);
 
   return store.txn((state) => {
-    const recentActivities = Object.values(state.activities).filter(
-      (x) => x.createdBy === creatorOpenid && x.createdAt > now - LIMITS.activityWindowMs
-    ).length;
-    if (recentActivities >= LIMITS.activityWindowMax) {
-      throw httpError(429, '近期创建活动过多，请稍后再试');
+    if (!opts.skipRateLimit) {
+      const recentActivities = Object.values(state.activities).filter(
+        (x) => x.createdBy === creatorOpenid && x.createdAt > now - LIMITS.activityWindowMs
+      ).length;
+      if (recentActivities >= LIMITS.activityWindowMax) {
+        throw httpError(429, '近期创建活动过多，请稍后再试');
+      }
     }
     const activity = {
       id: newId('act_'),
@@ -453,7 +455,7 @@ async function createRecurring(store, input, creatorOpenid, { count, stepDays })
   for (let i = 0; i < n; i++) {
     const instance = { ...input, startTime: baseStart + i * stepMs };
     if (hasEnd) instance.endTime = baseEnd + i * stepMs;
-    created.push(await createActivity(store, instance, creatorOpenid));
+    created.push(await createActivity(store, instance, creatorOpenid, Date.now(), { skipRateLimit: true }));
   }
   return created;
 }
@@ -565,6 +567,7 @@ async function updateActivity(store, id, actorOpenid, input) {
   if (input.title !== undefined) {
     title = (input.title || '').trim();
     if (!title) throw httpError(400, '请填写活动标题');
+    if (title.length > LIMITS.titleMax) throw httpError(400, `标题过长（最多 ${LIMITS.titleMax} 字）`);
   }
   let capacity;
   if (input.capacity !== undefined) {
@@ -598,7 +601,7 @@ async function updateActivity(store, id, actorOpenid, input) {
     }
 
     if (title !== undefined) a.title = title;
-    if (input.description !== undefined) a.description = (input.description || '').trim();
+    if (input.description !== undefined) a.description = (input.description || '').trim().slice(0, LIMITS.descriptionMax);
     if (input.location !== undefined) a.location = (input.location || '').trim();
     if (startTime !== undefined) a.startTime = startTime;
     if (endTime !== undefined) a.endTime = endTime;
