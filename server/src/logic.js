@@ -417,7 +417,7 @@ async function createActivity(store, input, creatorOpenid, now = Date.now(), opt
       }
     }
     const creator = state.users[creatorOpenid] || ensureUser(state, creatorOpenid);
-    const organizer = (input.organizer || '').trim() || creator.nickname;
+    const organizer = (input.organizer || '').trim() || creator.defaultOrganizer || creator.nickname;
     const activity = {
       id: newId('act_'),
       code: genCode(state),

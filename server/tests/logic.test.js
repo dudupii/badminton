@@ -1246,3 +1246,13 @@ test('updateActivity edits organizer without changing defaultOrganizer', async (
   assert.equal(updated.organizer, '别的名');
   assert.equal(store.snapshot().users['org'].defaultOrganizer, '飞羽'); // 编辑不改默认
 });
+
+test('createActivity: remembered defaultOrganizer is used when no organizer given', async () => {
+  const store = tmpStore();
+  await logic.updateProfile(store, 'org', { nickname: '队长' });
+  await logic.createActivity(store, { title: 'A', startTime: '2099-01-01T10:00:00', capacity: 4, organizer: '飞羽俱乐部' }, 'org', 1000);
+  // 下一场不传 organizer → 用记住的「飞羽俱乐部」，而不是回退昵称
+  const b = await logic.createActivity(store, { title: 'B', startTime: '2099-02-01T10:00:00', capacity: 4 }, 'org', 2000);
+  assert.equal(b.organizer, '飞羽俱乐部');
+  assert.equal(store.snapshot().users['org'].defaultOrganizer, '飞羽俱乐部');
+});
