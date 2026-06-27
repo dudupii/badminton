@@ -11,6 +11,7 @@
     </view>
     <view class="info-line">⏰ {{detail.timeText}}<text wx:if="{{detail.endText}}"> ～ {{detail.endText}}</text></view>
     <view class="info-line" wx:if="{{detail.location}}" bindtap="copyLocation">📍 {{detail.location}} <text class="muted">（点击复制）</text></view>
+    <view class="info-line" wx:if="{{detail.organizer}}">👤 {{detail.organizer}}</view>
     <view class="row between" style="margin-top:16rpx;">
       <view>
         <text style="color:#16a34a;font-weight:600;font-size:30rpx;">{{detail.confirmedCount}}/{{detail.capacity}}</text>

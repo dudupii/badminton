@@ -26,6 +26,9 @@
       <view wx:if="{{item.location}}" style="margin-top:8rpx;">
         <text class="muted">📍 {{item.location}}</text>
       </view>
+      <view wx:if="{{item.organizer}}" style="margin-top:8rpx;">
+        <text class="muted">👤 {{item.organizer}}</text>
+      </view>
 
       <view class="row between" style="margin-top:18rpx;">
         <text class="quota">
