@@ -14,6 +14,18 @@
     </view>
 
     <view class="field">
+      <view class="field-label">组织者</view>
+      <input
+        class="input"
+        placeholder="如：俱乐部名（默认你的昵称）"
+        maxlength="32"
+        value="{{organizer}}"
+        data-field="organizer"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="field">
       <view class="field-label">地点</view>
       <input
         class="input"

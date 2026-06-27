@@ -16,6 +16,7 @@ function timeStr(d) {
 Page({
   data: {
     title: '',
+    organizer: '',
     location: '',
     description: '',
     capacity: 8,
@@ -52,7 +53,21 @@ Page({
       endDate: dateStr(tomorrow),
       editId: (q && q.id) || '',
     });
-    if (q && q.id) this.loadForEdit(q.id);
+    if (q && q.id) {
+      this.loadForEdit(q.id);
+    } else {
+      this.prefillOrganizer();
+    }
+  },
+
+  // 新建活动：用记住的默认组织者（没有就回退昵称）预填。
+  async prefillOrganizer() {
+    try {
+      const me = await request('GET', '/api/user/me');
+      this.setData({ organizer: me.defaultOrganizer || me.nickname || '' });
+    } catch (e) {
+      /* 忽略——留空，提交时后端兜底昵称 */
+    }
   },
 
   // Prefill the form from an existing activity (edit mode).
@@ -62,6 +77,7 @@ Page({
       const start = new Date(a.startTime);
       const patch = {
         title: a.title || '',
+        organizer: a.organizer || '',
         location: a.location || '',
         description: a.description || '',
         capacity: a.capacity,
@@ -104,6 +120,7 @@ Page({
       const next = new Date(lastStart.getTime() + 7 * 24 * 60 * 60 * 1000);
       this.setData({
         title: last.title || '',
+        organizer: last.organizer || '',
         location: last.location || '',
         description: last.description || '',
         capacity: last.capacity || 8,
@@ -261,6 +278,7 @@ Page({
 
     const payload = {
       title: d.title.trim(),
+      organizer: d.organizer.trim(),
       location: d.location.trim(),
       description: d.description.trim(),
       startTime: start.toISOString(),
