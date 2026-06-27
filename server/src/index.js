@@ -89,8 +89,8 @@ app.get(
   requireAuth,
   wrap(async (req) => {
     const state = store.snapshot();
-    const u = state.users[req.user.openid] || { openid: req.user.openid, nickname: '球友', avatarUrl: '', level: '', gender: '' };
-    return { openid: u.openid, nickname: u.nickname, avatarUrl: u.avatarUrl, level: u.level || '', gender: u.gender || '' };
+    const u = state.users[req.user.openid] || { openid: req.user.openid, nickname: '球友', avatarUrl: '', level: '', gender: '', defaultOrganizer: '' };
+    return { openid: u.openid, nickname: u.nickname, avatarUrl: u.avatarUrl, level: u.level || '', gender: u.gender || '', defaultOrganizer: u.defaultOrganizer || '' };
   })
 );
 

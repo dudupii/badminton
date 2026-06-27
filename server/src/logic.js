@@ -304,6 +304,7 @@ function publicActivity(a) {
     createdAt: a.createdAt,
     status: a.status, // 'open' | 'closed'
     clubId: a.clubId || null,
+    organizer: a.organizer || null,
     fee: a.fee || null,
     rules: a.rules || null,
     rotation: a.rotation || null,
@@ -321,6 +322,7 @@ function ensureUser(state, openid) {
       avatarUrl: '',
       level: '',
       gender: '',
+      defaultOrganizer: '',
       subs: {},
       createdAt: Date.now(),
     };
@@ -414,6 +416,8 @@ async function createActivity(store, input, creatorOpenid, now = Date.now(), opt
         throw httpError(429, '近期创建活动过多，请稍后再试');
       }
     }
+    const creator = state.users[creatorOpenid] || ensureUser(state, creatorOpenid);
+    const organizer = (input.organizer || '').trim() || creator.nickname;
     const activity = {
       id: newId('act_'),
       code: genCode(state),
@@ -427,9 +431,11 @@ async function createActivity(store, input, creatorOpenid, now = Date.now(), opt
       createdAt: now,
       status: 'open',
       clubId: input.clubId || null,
+      organizer,
       rules,
     };
     state.activities[activity.id] = activity;
+    creator.defaultOrganizer = organizer; // 记住这次用的（仅创建时更新）
     return publicActivity(activity);
   });
 }
@@ -638,6 +644,7 @@ async function updateActivity(store, id, actorOpenid, input) {
     if (endTime !== undefined) a.endTime = endTime;
     if (capacity !== undefined) a.capacity = capacity;
     if (input.rules !== undefined) a.rules = validateRules(input.rules);
+    if (input.organizer !== undefined) a.organizer = (input.organizer || '').trim() || a.organizer;
     return publicActivity(a);
   });
 }

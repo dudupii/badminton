@@ -1215,3 +1215,34 @@ test('feed: cancelled registration does not make organizer relevant', async () =
   const allIds = (await logic.listFeed(store, 'me', { mode: 'all', now })).map((a) => a.id);
   assert.ok(allIds.includes(orgZnew.id), 'mode=all still shows it');
 });
+
+test('createActivity: organizer defaults to creator nickname and is remembered', async () => {
+  const store = tmpStore();
+  await logic.updateProfile(store, 'org', { nickname: '队长' });
+  const a = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4 }, 'org', 1000);
+  assert.equal(a.organizer, '队长');
+  assert.equal(store.snapshot().users['org'].defaultOrganizer, '队长');
+});
+
+test('createActivity: custom organizer is stored and becomes the default', async () => {
+  const store = tmpStore();
+  await logic.updateProfile(store, 'org', { nickname: '队长' });
+  const a = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4, organizer: '飞羽俱乐部' }, 'org', 1000);
+  assert.equal(a.organizer, '飞羽俱乐部');
+  assert.equal(store.snapshot().users['org'].defaultOrganizer, '飞羽俱乐部');
+});
+
+test('publicActivity exposes organizer', async () => {
+  const store = tmpStore();
+  const a = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4, organizer: 'X' }, 'org', 1000);
+  assert.equal(a.organizer, 'X');
+});
+
+test('updateActivity edits organizer without changing defaultOrganizer', async () => {
+  const store = tmpStore();
+  const a = await logic.createActivity(store, { title: 'T', startTime: '2099-01-01T10:00:00', capacity: 4, organizer: '飞羽' }, 'org', 1000);
+  assert.equal(store.snapshot().users['org'].defaultOrganizer, '飞羽');
+  const updated = await logic.updateActivity(store, a.id, 'org', { organizer: '别的名' });
+  assert.equal(updated.organizer, '别的名');
+  assert.equal(store.snapshot().users['org'].defaultOrganizer, '飞羽'); // 编辑不改默认
+});
