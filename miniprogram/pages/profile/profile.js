@@ -8,7 +8,7 @@ Page({
   data: {
     user: { nickname: '', avatarUrl: '', level: '', gender: '' },
     levelOptions: LEVELS.map((n) => ({ name: n, desc: LEVEL_DESC[n] })),
-    genders: ['男', '女', '不公开'],
+    genders: ['男', '女'],
     regs: [],
     myActs: [],
     loading: true,
