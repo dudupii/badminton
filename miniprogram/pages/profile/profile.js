@@ -89,7 +89,7 @@ Page({
     this.saveProfile();
   },
   onGenderChange(e) {
-    this.setData({ 'user.gender': this.data.genders[e.detail.value] });
+    this.setData({ 'user.gender': e.detail.value }); // radio-group 直接给值
     this.saveProfile();
   },
 

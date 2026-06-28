@@ -79,3 +79,19 @@
   font-size: 24rpx;
   margin-left: 16rpx;
 }
+
+/* 性别 radio（3 个短选项，横向一行）*/
+.gender-group {
+  display: flex;
+  align-items: center;
+}
+.gender-radio {
+  display: flex;
+  align-items: center;
+  margin-right: 36rpx;
+}
+.gender-label {
+  font-size: 28rpx;
+  margin-left: 8rpx;
+  color: #374151;
+}
