@@ -7,8 +7,7 @@ const { LEVELS, LEVEL_DESC } = require('../../utils/levels');
 Page({
   data: {
     user: { nickname: '', avatarUrl: '', level: '', gender: '' },
-    levels: LEVELS,
-    levelDesc: '',
+    levelOptions: LEVELS.map((n) => ({ name: n, desc: LEVEL_DESC[n] })),
     genders: ['男', '女', '不公开'],
     regs: [],
     myActs: [],
@@ -29,7 +28,7 @@ Page({
       const u = await request('GET', '/api/user/me');
       // avatars are stored server-relative; resolve for <image> display
       if (u.avatarUrl && u.avatarUrl.startsWith('/')) u.avatarUrl = BASE_URL + u.avatarUrl;
-      this.setData({ user: u, levelDesc: LEVEL_DESC[u.level] || '' });
+      this.setData({ user: u });
       getApp().globalData.userInfo = u;
     } catch (e) {
       /* ignore */
@@ -85,8 +84,8 @@ Page({
   },
 
   onLevelChange(e) {
-    const level = this.data.levels[e.detail.value];
-    this.setData({ 'user.level': level, levelDesc: LEVEL_DESC[level] || '' });
+    const level = e.detail.value; // radio-group 直接给 level 名
+    this.setData({ 'user.level': level });
     this.saveProfile();
   },
   onGenderChange(e) {

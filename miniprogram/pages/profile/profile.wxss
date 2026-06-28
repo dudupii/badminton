@@ -52,3 +52,30 @@
 .picker-val {
   color: #374151;
 }
+
+/* 水平 radio 单选（每个选项：单选圈 + 名称 + 说明）*/
+.level-block {
+  margin-top: 20rpx;
+}
+.level-block .field-label {
+  color: #6b7280;
+  margin-bottom: 4rpx;
+}
+.level-group {
+  display: flex;
+  flex-direction: column;
+}
+.level-row {
+  display: flex;
+  align-items: center;
+  padding: 10rpx 0;
+}
+.level-name {
+  font-size: 28rpx;
+  margin-left: 10rpx;
+  color: #374151;
+}
+.level-desc {
+  font-size: 24rpx;
+  margin-left: 16rpx;
+}
