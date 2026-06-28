@@ -55,11 +55,11 @@
 
 /* 水平 radio 单选（每个选项：单选圈 + 名称 + 说明）*/
 .level-block {
-  margin-top: 20rpx;
+  margin-top: 16rpx;
 }
 .level-block .field-label {
   color: #6b7280;
-  margin-bottom: 4rpx;
+  margin-bottom: 2rpx;
 }
 .level-group {
   display: flex;
@@ -68,19 +68,20 @@
 .level-row {
   display: flex;
   align-items: center;
-  padding: 10rpx 0;
+  padding: 6rpx 0;
 }
 .level-name {
   font-size: 28rpx;
+  font-weight: 400; /* 不加粗，正常即可 */
   margin-left: 10rpx;
   color: #374151;
 }
 .level-desc {
   font-size: 24rpx;
-  margin-left: 16rpx;
+  margin-left: 14rpx;
 }
 
-/* 性别 radio（3 个短选项，横向一行）*/
+/* 性别 radio（横向一行）*/
 .gender-group {
   display: flex;
   align-items: center;
@@ -88,10 +89,11 @@
 .gender-radio {
   display: flex;
   align-items: center;
-  margin-right: 36rpx;
+  margin-right: 28rpx;
 }
 .gender-label {
   font-size: 28rpx;
+  font-weight: 400;
   margin-left: 8rpx;
   color: #374151;
 }
