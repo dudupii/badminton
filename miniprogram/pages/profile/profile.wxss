@@ -71,8 +71,8 @@
   padding: 6rpx 0;
 }
 .level-name {
-  font-size: 28rpx;
-  font-weight: 400; /* 不加粗，正常即可 */
+  font-size: 24rpx;
+  /*  font-weight: 400;  不加粗，正常即可 */
   margin-left: 10rpx;
   color: #374151;
 }
