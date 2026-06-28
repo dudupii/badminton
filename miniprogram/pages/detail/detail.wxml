@@ -47,7 +47,7 @@
       <view class="row" style="align-items:center;">
         <input class="input" style="flex:1.5;font-size:24rpx;" placeholder="昵称" value="{{proxyName}}" bindinput="onProxyName" />
         <picker bindchange="onProxyLevel" value="{{levelOptions.indexOf(proxyLevel)}}" range="{{levelOptions}}" style="flex:1;margin:0 6rpx;"><view class="input" style="font-size:24rpx;text-align:center;">{{proxyLevel || '水平'}}</view></picker>
-        <picker bindchange="onProxyGender" value="{{['男','女','不公开'].indexOf(proxyGender)}}" range="{{['男','女','不公开']}}" style="flex:1;"><view class="input" style="font-size:24rpx;text-align:center;">{{proxyGender || '性别'}}</view></picker>
+        <picker bindchange="onProxyGender" value="{{['男','女'].indexOf(proxyGender)}}" range="{{['男','女']}}" style="flex:1;"><view class="input" style="font-size:24rpx;text-align:center;">{{proxyGender || '性别'}}</view></picker>
       </view>
       <button class="btn btn-primary" style="margin-top:8rpx;" bindtap="proxyRegister">代理追加</button>
     </view>

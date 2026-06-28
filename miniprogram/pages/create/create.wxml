@@ -142,7 +142,7 @@
         <view wx:for="{{['男','女']}}" wx:key="*this" data-gender="{{item}}" bindtap="toggleRuleGenderItem"
               class="tag {{ruleGenders.indexOf(item) >= 0 ? 'tag-open' : 'tag-wait'}}" style="margin:6rpx 8rpx 0 0;">{{item}}</view>
       </view>
-      <view wx:if="{{ruleGender}}" class="muted" style="margin-top:8rpx;font-size:24rpx;">没填或"不公开"性别的会被拦</view>
+      <view wx:if="{{ruleGender}}" class="muted" style="margin-top:8rpx;font-size:24rpx;">没填性别的会被拦</view>
     </view>
   </view>
 

@@ -375,7 +375,7 @@ Page({
   },
   onProxyName(e) { this.setData({ proxyName: e.detail.value }); },
   onProxyLevel(e) { this.setData({ proxyLevel: LEVELS[Number(e.detail.value)] || '' }); },
-  onProxyGender(e) { this.setData({ proxyGender: ['男','女','不公开'][Number(e.detail.value)] || '' }); },
+  onProxyGender(e) { this.setData({ proxyGender: ['男','女'][Number(e.detail.value)] || '' }); },
   async proxyRegister() {
     const d = this.data;
     const name = (d.proxyName || '').trim();

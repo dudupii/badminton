@@ -619,8 +619,7 @@ test('register enforces minLevel and gender restrictions', async () => {
   await withError(400, logic.register(store, actG.id, 'g1', 1000)); // 男 blocked
   await logic.updateProfile(store, 'g2', { gender: '女' });
   assert.equal((await logic.register(store, actG.id, 'g2', 2000)).status, 'confirmed'); // 女 ok
-  await logic.updateProfile(store, 'g3', { gender: '不公开' });
-  await withError(400, logic.register(store, actG.id, 'g3', 3000)); // 不公开 blocked
+  await withError(400, logic.register(store, actG.id, 'g3', 3000)); // 空性别 blocked（不在 allowedGenders 内）
 });
 
 test('late cancel (past cancelDeadline) marks attended=false and feeds the no-show ban', async () => {

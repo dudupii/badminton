@@ -20,6 +20,15 @@
 
   <!-- level / gender tags -->
   <view class="card">
+    <view class="field-row">
+      <view class="field-label">性别</view>
+      <radio-group bindchange="onGenderChange" class="gender-group">
+        <label class="gender-radio" wx:for="{{genders}}" wx:key="*this">
+          <radio value="{{item}}" checked="{{item === user.gender}}" color="#16a34a"/>
+          <text class="gender-label">{{item}}</text>
+        </label>
+      </radio-group>
+    </view>
     <view class="level-block">
       <view class="field-label">水平</view>
       <radio-group bindchange="onLevelChange" class="level-group">
@@ -27,15 +36,6 @@
           <radio value="{{item.name}}" checked="{{item.name === user.level}}" color="#16a34a"/>
           <text class="level-name">{{item.name}}</text>
           <text class="muted level-desc">{{item.desc}}</text>
-        </label>
-      </radio-group>
-    </view>
-    <view class="field-row">
-      <view class="field-label">性别</view>
-      <radio-group bindchange="onGenderChange" class="gender-group">
-        <label class="gender-radio" wx:for="{{genders}}" wx:key="*this">
-          <radio value="{{item}}" checked="{{item === user.gender}}" color="#16a34a"/>
-          <text class="gender-label">{{item}}</text>
         </label>
       </radio-group>
     </view>

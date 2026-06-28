@@ -13,7 +13,7 @@ const CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
 // User-selectable level / gender tags (kept in sync with the profile pickers).
 const LEVELS = ['新手', '入门', '初级', '中级', '中高级', '高级'];
-const GENDERS = ['男', '女', '不公开'];
+const GENDERS = ['男', '女'];
 
 // Abuse-prevention limits (public release). Module constants so logic stays
 // pure/testable; promote to env later if tuning-without-redeploy is needed.
